@@ -49,12 +49,13 @@ const T = {
 };
 
 // ─── Elevation tokens ─────────────────────────────────────────────────
-// Cards use a crisp 1px ring (no fuzzy drop shadow). The "elevation"
-// reads from the rounded corner + clean fill against the page panel,
-// not from a halo. Matches the AG/AccessGrid reference style where
-// cards sit cleanly on the surface.
+// Cards use a crisp 1px ring by default. cardElevated layers shadows
+// for the upsell pattern. cardFlat is the no-chrome counterpart.
 const E = {
   card: "0 0 0 1px rgba(38,38,43,0.08)",
+  cardElevated:
+    "0 1px 2px rgba(38,38,43,0.04), 0 6px 16px -8px rgba(38,38,43,0.10), 0 24px 48px -24px rgba(38,38,43,0.18), 0 0 0 1px rgba(38,38,43,0.04)",
+  cardFlat: "none",
   buttonGhost:
     "0 2px 4px -2px rgba(0,0,0,0.20), 0 0 0 1px rgba(38,38,43,0.08)",
   buttonBrand: `inset 0 1px 0.5px rgba(255,255,255,0.13), 0 1px 1px rgba(17,31,91,0.20), 0 2px 4px -2px rgba(17,31,91,0.40), 0 1px 5px -2px rgba(17,31,91,0.40), 0 0 0 1px ${T.btnRing}`,
@@ -81,6 +82,58 @@ const DASH = {
 
 // 3-stop gradient — osto's exact button gradient pattern.
 const BUTTON_BRAND_BG = `linear-gradient(${T.btnTop} 0%, ${T.accentDeep} 60%, ${T.btnRing} 100%)`;
+
+// ─── Spacing scale (4pt rhythm) ───────────────────────────────────────
+// Used by the components built on top of these tokens. Existing sections
+// pre-date this scale and use Tailwind classes directly; we don't churn
+// them here, but new primitives must consume from S.
+const S = {
+  xxs: 4,
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+  // Component-specific
+  cardPadding: 32,         // p-8
+  cardPaddingLg: 40,       // md:p-10
+  cardGap: 24,             // gap-x-6
+  cardStackGap: 40,        // gap-y-10 between rows
+};
+
+// ─── Radius scale ─────────────────────────────────────────────────────
+const R = {
+  sm: 6,
+  md: 10,    // matches button radius
+  lg: 24,    // card radius (was rounded-3xl)
+};
+
+// ─── Type scale ───────────────────────────────────────────────────────
+// Pre-baked size + leading + tracking pairings. Each entry is a partial
+// CSSProperties object so primitives can spread it into a style prop.
+type TypeToken = {
+  fontSize: number;
+  lineHeight: string;
+  letterSpacing: string;
+  fontWeight?: number;
+};
+// Fluid display sizes (h1, h2, lead) are applied directly via clamp()
+// in SectionHeading and Hero — they don't fit the fixed-size shape of
+// TypeToken and are documented in those components.
+const Type: Record<string, TypeToken> = {
+  // Eyebrow — small label above an H1/H2
+  eyebrow:    { fontSize: 12, lineHeight: "20px", letterSpacing: "-0.18px", fontWeight: 500 },
+  // Card-level
+  cardTitle:  { fontSize: 16, lineHeight: "24px", letterSpacing: "-0.24px", fontWeight: 500 },
+  body:       { fontSize: 14, lineHeight: "20px", letterSpacing: "-0.14px" },
+  bodySm:     { fontSize: 13, lineHeight: "20px", letterSpacing: "-0.13px" },
+  caption:    { fontSize: 12, lineHeight: "18px", letterSpacing: "-0.18px" },
+  // Pricing numerals
+  priceLg:    { fontSize: 32, lineHeight: "38px", letterSpacing: "-0.8px",  fontWeight: 500 },
+  priceCadence: { fontSize: 14, lineHeight: "20px", letterSpacing: "-0.14px" },
+};
+
 
 // ─── Page ─────────────────────────────────────────────────────────────
 export function OstoHeroV2() {
@@ -855,21 +908,40 @@ function IllusMegaIndustry() {
 }
 
 // ─── Buttons ──────────────────────────────────────────────────────────
+// ─── Buttons ───────────────────────────────────────────────────────────
+// Two visual variants (brand / ghost), two sizes (sm / md). Size sm
+// matches the dense in-product feel used throughout the page. Size md
+// scales for the hero CTA where the headline is 56px.
+type ButtonSize = "sm" | "md";
+
+const BTN_SIZE: Record<ButtonSize, { padX: number; padY: number; height: number; gap: number; type: TypeToken }> = {
+  sm: { padX: 12, padY: 6,  height: 32, gap: 6, type: Type.bodySm },
+  md: { padX: 18, padY: 10, height: 44, gap: 8, type: { fontSize: 15, lineHeight: "20px", letterSpacing: "-0.15px", fontWeight: 500 } },
+};
+
 function BrandButton({
   href,
   children,
+  size = "sm",
 }: {
   href: string;
   children: React.ReactNode;
+  size?: ButtonSize;
 }) {
+  const s = BTN_SIZE[size];
   return (
     <Link
       href={href}
       data-osto-brand-btn
-      className="inline-flex items-center gap-x-1.5 rounded-[10px] px-3 py-[6px] text-[13px] font-medium leading-[24px] tracking-[-0.13px] text-white"
+      className="inline-flex items-center text-white"
       style={{
+        ...s.type,
         background: BUTTON_BRAND_BG,
         boxShadow: E.buttonBrand,
+        borderRadius: R.md,
+        paddingInline: s.padX,
+        paddingBlock: s.padY,
+        gap: s.gap,
       }}
     >
       {children}
@@ -881,27 +953,36 @@ function GhostButton({
   href,
   children,
   withCaret = false,
+  size = "sm",
 }: {
   href: string;
   children: React.ReactNode;
   withCaret?: boolean;
+  size?: ButtonSize;
 }) {
+  const s = BTN_SIZE[size];
+  const caret = size === "md" ? 14 : 12;
   return (
     <Link
       href={href}
       data-osto-ghost-btn
-      className="inline-flex items-center gap-x-1.5 rounded-[10px] px-3 py-[6px] text-[13px] font-medium leading-[24px] tracking-[-0.13px]"
+      className="inline-flex items-center"
       style={{
+        ...s.type,
         background: T.surface,
         color: T.ink,
         boxShadow: E.buttonGhost,
+        borderRadius: R.md,
+        paddingInline: s.padX,
+        paddingBlock: s.padY,
+        gap: s.gap,
       }}
     >
       {children}
       {withCaret && (
         <svg
-          width="12"
-          height="12"
+          width={caret}
+          height={caret}
           viewBox="0 0 12 12"
           fill="none"
           aria-hidden
@@ -924,81 +1005,257 @@ function GhostButton({
 // ─── Hero ─────────────────────────────────────────────────────────────
 function Hero() {
   return (
-    <section className="relative px-6 pt-28 md:pt-36">
+    <section
+      className="relative px-6"
+      style={{ paddingTop: "clamp(96px, 14vw, 168px)" }}
+    >
       <div className="mx-auto max-w-[820px] text-center">
         <EyebrowPill>SOC 2 · ISO 27001 · HIPAA · GDPR</EyebrowPill>
+
+        {/* Eyebrow → H1 is a tight pairing (12px). The previous 20px gap
+            visually orphaned the eyebrow from the headline. */}
         <h1
-          className="mt-4 max-w-[640px] text-balance md:mt-5"
+          className="text-balance"
           style={{
             fontFamily: T.fontDisplay,
-            fontSize: "clamp(30px, 5vw, 48px)",
-            lineHeight: "1.08",
-            letterSpacing: "-0.025em",
             fontWeight: 500,
             color: T.ink,
-            margin: "0 auto",
+            fontSize: "clamp(40px, 6vw, 56px)",
+            lineHeight: 1.05,
+            letterSpacing: "-0.022em",
+            marginTop: S.sm,
+            marginInline: "auto",
+            maxWidth: 760,
           }}
         >
           Compliance is the byproduct of security.{" "}
           <span style={{ color: T.accent }}>We fix both.</span>
         </h1>
+
+        {/* H1 → lead has more air (24px). Lead is one focused sentence;
+            the price/timeline pitch moved to the trust line below. */}
         <p
-          className="mx-auto mt-3 max-w-[520px] text-[14px] leading-[24px]"
-          style={{ color: T.inkStrong, letterSpacing: "-0.14px" }}
+          className="mx-auto text-pretty"
+          style={{
+            color: T.inkStrong,
+            fontSize: "clamp(16px, 1.4vw, 18px)",
+            lineHeight: 1.45,
+            letterSpacing: "-0.012em",
+            marginTop: S.lg,
+            maxWidth: 560,
+          }}
         >
-          One platform for cloud, app, endpoint, and network security,
-          with built-in compliance, VAPT, and questionnaires. Live in
-          days, from $999/month.
+          One platform for cloud, app, endpoint, and network security with
+          built-in compliance, VAPT, and questionnaires.
         </p>
-        <div className="mt-7 flex items-center justify-center gap-x-2">
-          <BrandButton href="#">Book a 30-min demo</BrandButton>
-          <GhostButton href="#" withCaret>
+
+        {/* Lead → CTAs has the most air (40px). Gives the buttons
+            their own visual zone and lets them carry weight.
+            Wraps to a column on narrow screens so two md buttons
+            don't overflow at 320px. */}
+        <div
+          className="flex flex-col items-center justify-center sm:flex-row"
+          style={{ marginTop: S.xxl, gap: S.sm }}
+        >
+          <BrandButton href="#" size="md">Book a 30-min demo</BrandButton>
+          <GhostButton href="#" size="md" withCaret>
             Start 7-day free trial
           </GhostButton>
         </div>
+
+        {/* Trust line — small, quiet. Carries the "live in days, from
+            $999/month" claim that was crowding the lead. */}
+        <p
+          className="mx-auto"
+          style={{
+            ...Type.caption,
+            color: T.inkSubtle,
+            marginTop: S.md,
+          }}
+        >
+          Live in days · from $999/month · no credit card
+        </p>
       </div>
     </section>
   );
 }
 
 function EyebrowPill({ children }: { children: React.ReactNode }) {
-  // AG's pattern: 10×16px solid capsule + small label, both in accent.
-  // No pill background, no border. The capsule reads as a marker, not a UI chip.
+  // Small label that introduces an H1/H2. Tight letter-spacing, muted ink.
   return (
     <span
-      className="inline-flex items-center gap-x-2 text-[12px] leading-[20px] font-medium"
-      style={{ color: T.accent, letterSpacing: "-0.018px" }}
+      className="inline-flex items-center"
+      style={{ ...Type.eyebrow, color: T.inkSubtle }}
     >
-      <span
-        aria-hidden
-        className="inline-block h-2.5 w-4 rounded"
-        style={{ background: T.accent }}
-      />
       {children}
     </span>
   );
 }
 
 // ─── Logo strip ───────────────────────────────────────────────────────
+// Each customer logo is a small SVG mark + wordmark, all rendered in the
+// same muted ink ramp so the strip reads as one cohesive row. Marks vary
+// in geometric primitive (chevron, dots, monogram, rounded-square, hex)
+// so the strip doesn't look procedurally generated.
+
+type LogoSpec = {
+  name: string;
+  font: string;
+  weight: number;
+  tracking: string;
+  mark: (color: string) => React.ReactNode;
+  /** vertical optical nudge for the wordmark to sit on the mark's baseline */
+  nudge?: number;
+};
+
+const LOGO_MARKS: LogoSpec[] = [
+  {
+    // Handpickd — single chevron pinch, evokes a "hand" gesture
+    name: "Handpickd",
+    font: "var(--font-sans)",
+    weight: 600,
+    tracking: "-0.3px",
+    mark: (c) => (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+        <path
+          d="M4 6 L10 12 L16 6"
+          stroke={c}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M4 13.5 L10 19 L16 13.5"
+          stroke={c}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.45"
+        />
+      </svg>
+    ),
+  },
+  {
+    // smallcase — three concentric dots in a horizontal row, "cases"
+    name: "smallcase",
+    font: "var(--font-sans)",
+    weight: 500,
+    tracking: "-0.4px",
+    mark: (c) => (
+      <svg width="22" height="18" viewBox="0 0 24 18" fill="none" aria-hidden>
+        <circle cx="5" cy="9" r="3.5" fill={c} opacity="0.35" />
+        <circle cx="12" cy="9" r="3.5" fill={c} opacity="0.7" />
+        <circle cx="19" cy="9" r="3.5" fill={c} />
+      </svg>
+    ),
+  },
+  {
+    // AMNIC — geometric "A" monogram in a rounded square
+    name: "AMNIC",
+    font: "var(--font-sans)",
+    weight: 700,
+    tracking: "0.6px",
+    mark: (c) => (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+        <rect x="1" y="1" width="18" height="18" rx="4.5" stroke={c} strokeWidth="1.6" fill="none" />
+        <path
+          d="M5.5 14 L10 5.5 L14.5 14 M7.4 11.2 H12.6"
+          stroke={c}
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    // TCA — three vertical bars, ascending. Reads as analytics/finance.
+    name: "TCA",
+    font: "var(--font-sans)",
+    weight: 700,
+    tracking: "1.4px",
+    mark: (c) => (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+        <rect x="2.5"  y="11" width="3.4" height="7" rx="0.6" fill={c} opacity="0.45" />
+        <rect x="8.3"  y="7"  width="3.4" height="11" rx="0.6" fill={c} opacity="0.7" />
+        <rect x="14.1" y="3"  width="3.4" height="15" rx="0.6" fill={c} />
+      </svg>
+    ),
+  },
+  {
+    // PixelDust — a 3×3 dot matrix with one corner pixel detached
+    name: "PixelDust",
+    font: "var(--font-sans)",
+    weight: 600,
+    tracking: "-0.2px",
+    mark: (c) => (
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+        {[0, 1, 2].map((row) =>
+          [0, 1, 2].map((col) => (
+            <rect
+              key={`${row}-${col}`}
+              x={3 + col * 5}
+              y={3 + row * 5}
+              width="3"
+              height="3"
+              rx="0.6"
+              fill={c}
+              opacity={row === 0 && col === 2 ? 0.35 : 1}
+            />
+          ))
+        )}
+        {/* detached pixel — top-right corner drifting away */}
+        <rect x="17" y="0.5" width="2.2" height="2.2" rx="0.5" fill={c} opacity="0.55" />
+      </svg>
+    ),
+  },
+];
+
 function LogoStrip() {
-  const logos = ["Handpickd", "smallcase", "AMNIC", "TCA", "PixelDust"];
+  // Slightly muted ink so the strip reads as a quiet credibility row,
+  // not as primary content. All marks + wordmarks share this color.
+  const logoInk = T.inkMid;
+
   return (
     <section className="px-6 pt-20 md:pt-24">
       <div className="mx-auto max-w-[980px]">
         <p
-          className="text-center text-[12px] font-medium uppercase tracking-[0.14em]"
-          style={{ color: T.inkSubtle }}
+          className="text-center"
+          style={{ ...Type.body, color: T.inkSubtle }}
         >
-          Securing growing teams across India and MENA
+          Trusted by fast-growing teams across India and MENA
         </p>
-        <ul className="mt-7 flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
-          {logos.map((l) => (
+        <ul
+          className="flex flex-wrap items-center justify-center"
+          style={{
+            marginTop: S.xl,
+            columnGap: S.xxl,
+            rowGap: S.md,
+          }}
+        >
+          {LOGO_MARKS.map((logo) => (
             <li
-              key={l}
-              className="text-[16px] font-medium tracking-[-0.2px]"
-              style={{ color: T.inkStrong, fontFamily: "Georgia, serif" }}
+              key={logo.name}
+              className="inline-flex items-center"
+              style={{ gap: S.xs, color: logoInk }}
+              aria-label={logo.name}
             >
-              {l}
+              {logo.mark(logoInk)}
+              <span
+                style={{
+                  fontFamily: logo.font,
+                  fontWeight: logo.weight,
+                  fontSize: 16,
+                  lineHeight: "20px",
+                  letterSpacing: logo.tracking,
+                  color: logoInk,
+                  transform: logo.nudge
+                    ? `translateY(${logo.nudge}px)`
+                    : undefined,
+                }}
+              >
+                {logo.name}
+              </span>
             </li>
           ))}
         </ul>
@@ -1025,17 +1282,14 @@ function HowItWorks() {
           boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
         }}
       >
-        <div className="relative grid gap-y-10 px-8 py-10 md:grid-cols-2 md:gap-x-12 md:px-12 md:py-16">
+        <div className="relative grid gap-y-10 px-6 py-10 md:grid-cols-2 md:gap-x-12 md:px-12 md:py-16">
           {/* Left copy — left-aligned inline (overrides SectionHeading's
               md:text-center default since we're inside a two-column layout) */}
           <div className="relative z-10 self-center">
             <h2
-              className="text-balance"
+              className="text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
               style={{
                 fontFamily: T.fontDisplay,
-                fontSize: "clamp(24px, 3vw, 30px)",
-                lineHeight: "36px",
-                letterSpacing: "-0.75px",
                 fontWeight: 500,
                 color: T.ink,
               }}
@@ -1043,8 +1297,8 @@ function HowItWorks() {
               How it works.
             </h2>
             <p
-              className="mt-4 max-w-[42ch] text-[14px] leading-[22px]"
-              style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
+              className="mt-4 max-w-[42ch] text-[16px] leading-[24px]"
+              style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
             >
               Wire up Osto in an afternoon. Controls go live first, evidence
               collects itself, auditors get a portal. No spreadsheets, no
@@ -1120,14 +1374,14 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
     <li className="flex gap-x-3">
       <span
-        className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-medium text-white tabular-nums"
         style={{ background: T.accent }}
       >
         {n}
       </span>
       <span
-        className="text-[13px] leading-[22px]"
-        style={{ color: T.ink, letterSpacing: "-0.13px" }}
+        className="text-[16px] leading-[24px]"
+        style={{ color: T.ink, letterSpacing: "-0.24px" }}
       >
         {children}
       </span>
@@ -1147,13 +1401,13 @@ function Field({
   return (
     <div>
       <p
-        className="text-[11px] font-medium uppercase tracking-[0.06em]"
+        className="text-[12px] font-medium leading-[16px]"
         style={{ color: T.inkSubtle }}
       >
         {label}
       </p>
       <div
-        className="mt-1 flex items-center gap-x-2 rounded-[8px] px-3 py-2 text-[12.5px]"
+        className="mt-1 flex items-center gap-x-2 rounded-[8px] px-3 py-2 text-[14px] leading-[20px]"
         style={{
           background: T.surface,
           color: T.ink,
@@ -1173,165 +1427,223 @@ function Field({
   );
 }
 
-// ─── Problem — fragmented stack vs. one platform ──────────────────────
 function ProblemSection() {
   return (
-    <section className="px-6 pt-4">
-      <div className="mx-auto max-w-[1180px]">
+    <section className="pt-4">
+      <div className="mx-auto max-w-[1240px] px-6">
         <SectionHeading>
           The old way is slow,{" "}
           <span style={{ color: T.accent }}>complex, and expensive.</span>
         </SectionHeading>
         <p
-          className="mx-auto mt-4 max-w-[600px] text-center text-[14px] leading-[24px]"
-          style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
+          className="mx-auto mt-4 max-w-[600px] text-center text-[15px] leading-[24px]"
+          style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
         >
-          A WAF here. An endpoint tool there. A compliance platform. A VAPT firm.
-          Multiple invoices, scattered dashboards, months of deployment, and
-          security that still leaves gaps.
+          Most teams stitch together a WAF, an endpoint agent, a compliance
+          platform, and a VAPT firm. You pay six invoices, watch four
+          dashboards, and still have gaps you cannot see.
         </p>
+      </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          <ComparisonCard
-            label="Without Osto"
-            tone="neutral"
-            title="6 vendors. 6 invoices."
-            line1="$100K–$150K"
-            line1Caption="approximate annual spend"
-            line2="6–9 months"
-            line2Caption="vendors · audits · scans · follow-ups"
-            chips={["Cloudflare", "CrowdStrike", "Wiz", "Vanta", "Okta", "VAPT firm"]}
-          />
-          <ComparisonCard
-            label="With Osto"
-            tone="brand"
-            title="One platform. One team."
-            line1="$999"
-            line1Caption="monthly · single invoice"
-            line2="Days"
-            line2Caption="security, compliance, VAPT live"
-            chips={["WAF", "CSPM", "ZTNA", "Compliance", "VAPT", "Questionnaires"]}
-          />
-        </div>
+      {/* Two panels split the rail-bounded area edge to edge.
+          Stack vertically below md so the hero metrics don't crush. */}
+      <div
+        className="mt-12 grid grid-cols-1 md:[grid-template-columns:minmax(0,12fr)_minmax(0,14fr)]"
+        style={{
+          marginLeft: `calc(${RAIL_INSET} + 1px)`,
+          marginRight: `calc(${RAIL_INSET} + 1px)`,
+        }}
+      >
+        <ComparisonPanel
+          tone="neutral"
+          label="Without Osto"
+          title="Six vendors. Six invoices."
+          metric="$100K–$150K"
+          metricCaption="approximate annual spend"
+          timeline="6–9 months"
+          timelineCaption="vendors, audits, scans, follow-ups"
+          tagsLabel="Replaces"
+          tags={["Cloudflare", "CrowdStrike", "Wiz", "Vanta", "Okta", "VAPT firm"]}
+        />
+        <ComparisonPanel
+          tone="brand"
+          label="With Osto"
+          title="One platform. One team."
+          metric="$999"
+          metricCaption="monthly, single invoice"
+          timeline="Days, not months"
+          timelineCaption="security, compliance, and VAPT live"
+          tagsLabel="Includes"
+          tags={["WAF", "CSPM", "ZTNA", "Compliance", "VAPT", "Questionnaires"]}
+        />
+      </div>
+
+      <div className="mx-auto max-w-[1240px] px-6">
+        <DeltaRow />
       </div>
     </section>
   );
 }
 
-function ComparisonCard({
-  label,
+function ComparisonPanel({
   tone,
+  label,
   title,
-  line1,
-  line1Caption,
-  line2,
-  line2Caption,
-  chips,
+  metric,
+  metricCaption,
+  timeline,
+  timelineCaption,
+  tagsLabel,
+  tags,
 }: {
-  label: string;
   tone: "neutral" | "brand";
+  label: string;
   title: string;
-  line1: string;
-  line1Caption: string;
-  line2: string;
-  line2Caption: string;
-  chips: string[];
+  metric: string;
+  metricCaption: string;
+  timeline: string;
+  timelineCaption: string;
+  tagsLabel: string;
+  tags: string[];
 }) {
   const isBrand = tone === "brand";
-  const bg = isBrand ? BUTTON_BRAND_BG : T.panel;
-  const ink = isBrand ? "rgba(255,255,255,0.92)" : T.ink;
-  const inkSoft = isBrand ? "rgba(255,255,255,0.65)" : T.inkSoft;
-  const inkSubtle = isBrand ? "rgba(255,255,255,0.55)" : T.inkSubtle;
-  const chipBg = isBrand ? "rgba(255,255,255,0.12)" : T.surface;
-  const chipShadow = isBrand
-    ? "inset 0 0 0 1px rgba(255,255,255,0.14)"
-    : E.ringOnly;
 
+  const ink = isBrand ? "rgba(255,255,255,0.96)" : T.ink;
+  const inkSoft = isBrand ? "rgba(255,255,255,0.66)" : T.inkSoft;
+  const inkSubtle = isBrand ? "rgba(255,255,255,0.50)" : T.inkSubtle;
+  const inkLine = isBrand ? "rgba(255,255,255,0.12)" : T.panelHairline;
+
+  // Brand panel's seam highlight: top edge always (works in both stack
+  // and side-by-side). Left edge only on md+ where the seam is vertical.
   return (
     <article
-      className="rounded-3xl p-8 md:p-10"
+      className={
+        isBrand
+          ? "relative px-6 py-8 md:px-12 md:py-14 [box-shadow:inset_0_1px_0_rgba(255,255,255,0.10)] md:[box-shadow:inset_1px_0_0_rgba(255,255,255,0.10),inset_0_1px_0_rgba(255,255,255,0.10)]"
+          : "relative px-6 py-8 md:px-12 md:py-14"
+      }
       style={{
-        background: bg,
-        boxShadow: isBrand ? "none" : E.ringOnly,
+        background: isBrand ? BUTTON_BRAND_BG : T.panel,
+        zIndex: isBrand ? 2 : 1,
       }}
     >
       <p
-        className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-        style={{ color: inkSubtle }}
+        className="text-[13px] font-medium leading-[20px]"
+        style={{ color: inkSubtle, letterSpacing: "-0.13px" }}
       >
         {label}
       </p>
+
       <h3
-        className="mt-2 font-medium"
+        className="mt-2 max-w-[26ch] text-[20px] font-medium leading-[26px] md:text-[22px] md:leading-[28px]"
         style={{
           fontFamily: T.fontDisplay,
           color: ink,
-          fontSize: "22px",
-          lineHeight: "28px",
-          letterSpacing: "-0.4px",
+          letterSpacing: "-0.36px",
+          textWrap: "balance",
         }}
       >
         {title}
       </h3>
 
-      <div className="mt-8 grid grid-cols-2 gap-x-6">
-        <div>
-          <p
-            className="text-[28px] font-medium"
-            style={{
-              fontFamily: T.fontDisplay,
-              color: ink,
-              lineHeight: "32px",
-              letterSpacing: "-0.7px",
-            }}
-          >
-            {line1}
-          </p>
-          <p
-            className="mt-1.5 text-[12px]"
-            style={{ color: inkSoft, letterSpacing: "-0.018px" }}
-          >
-            {line1Caption}
-          </p>
-        </div>
-        <div>
-          <p
-            className="text-[28px] font-medium"
-            style={{
-              fontFamily: T.fontDisplay,
-              color: ink,
-              lineHeight: "32px",
-              letterSpacing: "-0.7px",
-            }}
-          >
-            {line2}
-          </p>
-          <p
-            className="mt-1.5 text-[12px]"
-            style={{ color: inkSoft, letterSpacing: "-0.018px" }}
-          >
-            {line2Caption}
-          </p>
-        </div>
+      <div className="mt-10">
+        <p
+          className="font-medium tabular-nums"
+          style={{
+            fontFamily: T.fontDisplay,
+            color: ink,
+            letterSpacing: isBrand ? "-2.2px" : "-1.4px",
+            fontSize: isBrand ? "clamp(48px, 6.4vw, 76px)" : "clamp(36px, 4.4vw, 52px)",
+            lineHeight: "1",
+          }}
+        >
+          {metric}
+        </p>
+        <p
+          className="mt-3 text-[13px] leading-[20px]"
+          style={{ color: inkSoft, letterSpacing: "-0.13px" }}
+        >
+          {metricCaption}
+        </p>
       </div>
 
-      <ul className="mt-8 flex flex-wrap gap-2">
-        {chips.map((c) => (
-          <li
-            key={c}
-            className="rounded-full px-2.5 py-1 text-[11px] font-medium"
-            style={{
-              background: chipBg,
-              boxShadow: chipShadow,
-              color: ink,
-              letterSpacing: "-0.018px",
-            }}
-          >
-            {c}
-          </li>
+      <div
+        className="mt-8 flex flex-wrap items-baseline gap-x-3 pt-4"
+        style={{ borderTop: `1px solid ${inkLine}` }}
+      >
+        <span
+          className="shrink-0 text-[18px] font-medium leading-[24px] md:text-[20px] md:leading-[26px]"
+          style={{
+            fontFamily: T.fontDisplay,
+            color: ink,
+            letterSpacing: "-0.4px",
+          }}
+        >
+          {timeline}
+        </span>
+        <span
+          className="text-[13px] leading-[20px]"
+          style={{ color: inkSoft, letterSpacing: "-0.13px" }}
+        >
+          {timelineCaption}
+        </span>
+      </div>
+
+      <p
+        className="mt-7 text-[13px] leading-[20px]"
+        style={{ color: inkSoft, letterSpacing: "-0.13px" }}
+      >
+        <span className="mr-1.5 font-medium" style={{ color: inkSubtle }}>
+          {tagsLabel}
+        </span>
+        {tags.map((t, i) => (
+          <span key={t}>
+            <span style={{ color: ink, fontWeight: 500 }}>{t}</span>
+            {i < tags.length - 1 && (
+              <span style={{ color: inkSubtle }}>{", "}</span>
+            )}
+          </span>
         ))}
-      </ul>
+      </p>
     </article>
+  );
+}
+
+function DeltaRow() {
+  const deltas: Array<{ from: string; to: string; label: string }> = [
+    { from: "6 vendors", to: "1 platform", label: "Procurement" },
+    { from: "6–9 months", to: "Days", label: "Time to live" },
+    { from: "$100K–$150K", to: "$999/mo", label: "Spend" },
+  ];
+  return (
+    <ul
+      className="mt-10 grid grid-cols-1 gap-y-3 md:mt-14 md:grid-cols-3 md:gap-x-12 md:gap-y-0"
+      style={{
+        borderTop: `1px solid ${T.panelHairline}`,
+        paddingTop: 24,
+      }}
+    >
+      {deltas.map((d) => (
+        <li key={d.label} className="flex items-baseline gap-x-3">
+          <span
+            className="text-[13px] font-medium"
+            style={{ color: T.inkSubtle, letterSpacing: "-0.13px" }}
+          >
+            {d.label}
+          </span>
+          <span
+            className="ml-auto flex items-baseline gap-x-2 text-[13px] leading-[20px]"
+            style={{ letterSpacing: "-0.13px" }}
+          >
+            <span style={{ color: T.inkSubtle, textDecoration: "line-through" }}>
+              {d.from}
+            </span>
+            <span style={{ color: T.inkSubtle }}>to</span>
+            <span style={{ color: T.ink, fontWeight: 600 }}>{d.to}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -1447,17 +1759,17 @@ function CustomerStories() {
               style={{ background: T.surface, boxShadow: E.card }}
             >
               <p
-                className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+                className="text-[14px] font-medium leading-[20px]"
                 style={{ color: T.accent }}
               >
-                Funding stage · {s.stage}
+                {s.stage}
               </p>
               <p
                 className="mt-4 text-[16px] leading-[24px]"
                 style={{
                   color: T.ink,
                   fontFamily: T.fontDisplay,
-                  letterSpacing: "-0.2px",
+                  letterSpacing: "-0.24px",
                 }}
               >
                 &ldquo;{s.quote}&rdquo;
@@ -1466,12 +1778,12 @@ function CustomerStories() {
                 <SketchPortrait seed={s.name} />
                 <div>
                   <p
-                    className="text-[13px] font-medium"
+                    className="text-[14px] font-medium leading-[20px]"
                     style={{ color: T.ink }}
                   >
                     {s.name}
                   </p>
-                  <p className="text-[12px]" style={{ color: T.inkSoft }}>
+                  <p className="text-[14px] leading-[20px]" style={{ color: T.inkSoft }}>
                     {s.role}
                   </p>
                 </div>
@@ -1577,12 +1889,9 @@ function PricingCalculator() {
           Pricing calculator
         </p>
         <h2
-          className="mx-auto mt-3 max-w-[680px] text-balance text-center"
+          className="mx-auto mt-4 max-w-[680px] text-balance text-center text-[32px] leading-[38px] tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
           style={{
             fontFamily: T.fontDisplay,
-            fontSize: "clamp(28px, 4vw, 40px)",
-            lineHeight: "1.1",
-            letterSpacing: "-0.025em",
             fontWeight: 500,
             color: T.ink,
           }}
@@ -1834,16 +2143,16 @@ function PricingCalculator() {
                   </span>
                   <span>
                     <span
-                      className="block text-[13px]"
+                      className="block text-[14px] leading-[20px]"
                       style={{
                         color: T.ink,
-                        letterSpacing: "-0.13px",
+                        letterSpacing: "-0.14px",
                       }}
                     >
                       Add OSCP-led VAPT
                     </span>
                     <span
-                      className="block text-[11px]"
+                      className="block text-[12px] leading-[16px]"
                       style={{ color: T.inkSubtle }}
                     >
                       One-time engagement, 7-day delivery
@@ -1851,7 +2160,7 @@ function PricingCalculator() {
                   </span>
                 </span>
                 <span
-                  className="text-[12px] font-medium"
+                  className="text-[14px] font-medium leading-[20px] tabular-nums"
                   style={{ color: T.inkSoft }}
                 >
                   +${VAPT_PRICE}
@@ -1862,7 +2171,7 @@ function PricingCalculator() {
             {/* Column 3: live total */}
             <div className="flex flex-col gap-y-5 p-8 md:p-10">
               <p
-                className="text-[11px] font-semibold uppercase tracking-[0.14em]"
+                className="text-[14px] font-medium leading-[20px]"
                 style={{ color: T.inkSubtle }}
               >
                 Annual estimate
@@ -1920,8 +2229,8 @@ function PricingCalculator() {
                 </span>
               </div>
               <p
-                className="text-[11px]"
-                style={{ color: T.inkSubtle, letterSpacing: "-0.018px" }}
+                className="text-[14px] leading-[20px]"
+                style={{ color: T.inkSubtle }}
               >
                 Annual billing · 2 months free vs monthly. Includes
                 onboarding, audit portal, and Slack support.
@@ -1952,26 +2261,24 @@ function CalcLineItem({
   return (
     <div>
       <p
-        className="text-[12px] font-medium"
-        style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
+        className="text-[14px] font-medium leading-[20px]"
+        style={{ color: T.inkSoft }}
       >
         {label}
       </p>
       <p
-        className="mt-1 font-medium"
+        className="mt-1 text-[24px] font-medium leading-[28px]"
         style={{
           fontFamily: T.fontDisplay,
           color: T.ink,
-          fontSize: "26px",
-          lineHeight: "32px",
-          letterSpacing: "-0.65px",
+          letterSpacing: "-0.6px",
         }}
       >
         {price}
       </p>
       <p
-        className="mt-1.5 text-[12px] leading-[18px]"
-        style={{ color: T.inkSubtle, letterSpacing: "-0.018px" }}
+        className="mt-1.5 text-[14px] leading-[20px]"
+        style={{ color: T.inkSubtle }}
       >
         {caption}
       </p>
@@ -2039,13 +2346,13 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-x-4">
       <span
-        className="text-[12.5px]"
-        style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
+        className="text-[14px] leading-[20px]"
+        style={{ color: T.inkSoft }}
       >
         {label}
       </span>
       <span
-        className="text-[13px] font-medium tabular-nums"
+        className="text-[14px] font-medium leading-[20px] tabular-nums"
         style={{ color: T.ink }}
       >
         {value}
@@ -2054,7 +2361,23 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ─── Pricing — Enterprise Ready + Custom ──────────────────────────────
+// ─── Pricing — Platform + Custom ──────────────────────────────────────
+const PLATFORM_FEATURES = [
+  "Web App & API Protection (200K req/mo)",
+  "Web Scanner & Mobile App Scanner",
+  "Secure Server Access (ZTNA)",
+  "Security + Compliance + VAPT + Questionnaire",
+  "Up to 20 endpoint users",
+];
+
+const CUSTOM_FEATURES = [
+  "Unlimited requests & resources",
+  "Dedicated support",
+  "Custom integrations",
+  "Priority onboarding",
+  "SLA guarantee",
+];
+
 function Pricing() {
   return (
     <section className="px-6 pt-4" id="pricing">
@@ -2064,161 +2387,92 @@ function Pricing() {
           <span style={{ color: T.accent }}>as you scale.</span>
         </SectionHeading>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {/* Most popular — Enterprise Ready */}
-          <article
-            className="relative rounded-3xl p-8 md:p-10"
-            style={{
-              background: T.surface,
-              boxShadow: `${E.card}, 0 0 0 1.5px ${T.accent}`,
-            }}
-          >
-            <span
-              className="absolute right-6 top-6 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
-              style={{ background: `${T.accent}14`, color: T.accent }}
-            >
-              Most popular
-            </span>
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-              style={{ color: T.inkSubtle }}
-            >
-              Enterprise Ready
-            </p>
-            <p
-              className="mt-1 text-[14px]"
-              style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
-            >
-              Growing teams and SaaS startups.
-            </p>
-            <div className="mt-6 flex items-baseline gap-x-2">
-              <span
-                className="font-medium"
-                style={{
-                  fontFamily: T.fontDisplay,
-                  color: T.ink,
-                  fontSize: "44px",
-                  lineHeight: "44px",
-                  letterSpacing: "-1.1px",
-                }}
-              >
-                $999
-              </span>
-              <span
-                className="text-[14px]"
-                style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
-              >
-                /month
-              </span>
-            </div>
-            <p
-              className="mt-1 text-[12px]"
-              style={{ color: T.inkSubtle, letterSpacing: "-0.018px" }}
-            >
-              $10,000 billed annually · 7-day free trial
-            </p>
+        <div
+          className="grid items-start md:grid-cols-2"
+          style={{
+            marginTop: S.xxl,
+            columnGap: S.cardGap,
+            rowGap: S.cardStackGap,
+          }}
+        >
+          <PricingTier variant="elevated">
+            <PriceLabel
+              name="Platform"
+              description="Growing teams and SaaS startups."
+            />
+            <PriceAmount
+              amount="$999"
+              cadence="/month"
+              footnote="$10,000 billed annually, 7-day free trial"
+            />
 
-            <div className="mt-6 flex flex-col gap-y-2 sm:flex-row sm:items-center sm:gap-x-2">
+            <div
+              className="flex flex-col sm:flex-row sm:items-center"
+              style={{ marginTop: S.lg, gap: S.xs }}
+            >
               <BrandButton href="#">Book demo</BrandButton>
               <GhostButton href="#" withCaret>
                 Start free trial
               </GhostButton>
             </div>
 
-            <ul
-              className="mt-7 space-y-2.5 border-t pt-6"
-              style={{ borderColor: T.ring }}
-            >
-              {[
-                "Web App & API Protection (200K req/mo)",
-                "Web Scanner & Mobile App Scanner",
-                "Secure Server Access (ZTNA)",
-                "Security + Compliance + VAPT + Questionnaire",
-                "Up to 20 endpoint users",
-              ].map((f) => (
-                <PricingFeature key={f}>{f}</PricingFeature>
-              ))}
-            </ul>
-          </article>
+            <FeatureList items={PLATFORM_FEATURES} />
+          </PricingTier>
 
-          {/* Custom */}
-          <article
-            className="relative rounded-3xl p-8 md:p-10"
-            style={{
-              background: T.panel,
-              boxShadow: E.ringOnly,
-            }}
-          >
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-              style={{ color: T.inkSubtle }}
-            >
-              Custom
-            </p>
-            <p
-              className="mt-1 text-[14px]"
-              style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
-            >
-              Specific scope or scale.
-            </p>
-            <div className="mt-6">
-              <span
-                className="font-medium"
-                style={{
-                  fontFamily: T.fontDisplay,
-                  color: T.ink,
-                  fontSize: "44px",
-                  lineHeight: "44px",
-                  letterSpacing: "-1.1px",
-                }}
-              >
-                Let&apos;s talk
-              </span>
-            </div>
-            <p
-              className="mt-1 text-[12px]"
-              style={{ color: T.inkSubtle, letterSpacing: "-0.018px" }}
-            >
-              Custom pricing tuned to your scope.
-            </p>
+          <PricingTier variant="flat">
+            <PriceLabel
+              name="Custom"
+              description="Specific scope or scale."
+            />
+            <PriceAmount
+              amount="Let's talk"
+              footnote="Custom pricing tuned to your scope."
+            />
 
-            <div className="mt-6">
+            <div style={{ marginTop: S.lg }}>
               <GhostButton href="#" withCaret>
                 Request a quote
               </GhostButton>
             </div>
 
-            <ul
-              className="mt-7 space-y-2.5 border-t pt-6"
-              style={{ borderColor: T.ring }}
-            >
-              {[
-                "Unlimited requests & resources",
-                "Dedicated support",
-                "Custom integrations",
-                "Priority onboarding",
-                "SLA guarantee",
-              ].map((f) => (
-                <PricingFeature key={f}>{f}</PricingFeature>
-              ))}
-            </ul>
-          </article>
+            <FeatureList items={CUSTOM_FEATURES} />
+          </PricingTier>
         </div>
       </div>
     </section>
   );
 }
 
+function FeatureList({ items }: { items: string[] }) {
+  return (
+    <ul
+      style={{
+        marginTop: S.xl,
+        paddingTop: S.lg,
+        borderTop: `1px solid ${T.ring}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: S.sm,
+      }}
+    >
+      {items.map((f) => (
+        <PricingFeature key={f}>{f}</PricingFeature>
+      ))}
+    </ul>
+  );
+}
+
 function PricingFeature({ children }: { children: React.ReactNode }) {
   return (
-    <li className="flex items-start gap-x-2.5">
+    <li className="flex items-start" style={{ gap: S.sm }}>
       <svg
-        width="14"
-        height="14"
+        width={14}
+        height={14}
         viewBox="0 0 16 16"
         fill="none"
         aria-hidden
-        className="mt-1 shrink-0"
+        className="shrink-0"
+        style={{ marginTop: S.xxs }}
       >
         <path
           d="m3.5 8 3 3 6-6"
@@ -2228,13 +2482,110 @@ function PricingFeature({ children }: { children: React.ReactNode }) {
           strokeLinejoin="round"
         />
       </svg>
-      <span
-        className="text-[13px] leading-[20px]"
-        style={{ color: T.ink, letterSpacing: "-0.13px" }}
-      >
-        {children}
-      </span>
+      <span style={{ ...Type.bodySm, color: T.ink }}>{children}</span>
     </li>
+  );
+}
+
+// ─── Pricing primitives ───────────────────────────────────────────────
+
+/**
+ * PricingTier — card surface for one pricing plan. Two variants:
+ * `elevated` (the upsell — white fill + layered drop shadow) and
+ * `flat` (the alternative — no chrome, sits on the page).
+ *
+ * Padding scales up at md+ for the elevated variant so the upsell
+ * card breathes on desktop without bloating mobile.
+ */
+function PricingTier({
+  variant,
+  children,
+}: {
+  variant: "elevated" | "flat";
+  children: React.ReactNode;
+}) {
+  const isElevated = variant === "elevated";
+  return (
+    <article
+      className={
+        isElevated
+          ? "relative p-6 md:p-10"   // S.lg → S.cardPaddingLg
+          : "relative md:pl-2"        // flat: inherits page gutter, tiny optical inset on md
+      }
+      style={{
+        background: isElevated ? T.surface : "transparent",
+        boxShadow: isElevated ? E.cardElevated : E.cardFlat,
+        borderRadius: isElevated ? R.lg : 0,
+      }}
+    >
+      {children}
+    </article>
+  );
+}
+
+/**
+ * PriceLabel — tier name + one-line description.
+ */
+function PriceLabel({
+  name,
+  description,
+}: {
+  name: string;
+  description: string;
+}) {
+  return (
+    <div>
+      <p style={{ ...Type.cardTitle, color: T.ink }}>{name}</p>
+      <p style={{ ...Type.body, color: T.inkSoft, marginTop: S.xxs }}>
+        {description}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * PriceAmount — numeric or text price + optional cadence + optional
+ * footnote (annual price, trial info, etc).
+ */
+function PriceAmount({
+  amount,
+  cadence,
+  footnote,
+}: {
+  amount: string;
+  cadence?: string;
+  footnote?: string;
+}) {
+  return (
+    <div style={{ marginTop: S.lg }}>
+      <div className="flex items-baseline" style={{ gap: S.xs }}>
+        <span
+          style={{
+            ...Type.priceLg,
+            fontFamily: T.fontDisplay,
+            color: T.ink,
+          }}
+        >
+          {amount}
+        </span>
+        {cadence && (
+          <span style={{ ...Type.priceCadence, color: T.inkSoft }}>
+            {cadence}
+          </span>
+        )}
+      </div>
+      {footnote && (
+        <p
+          style={{
+            ...Type.caption,
+            color: T.inkSubtle,
+            marginTop: S.xxs,
+          }}
+        >
+          {footnote}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -2285,30 +2636,28 @@ function TrustPillar({
       style={{ background: T.surface, boxShadow: E.card }}
     >
       <p
-        className="font-medium"
+        className="text-[32px] font-medium leading-[38px]"
         style={{
           fontFamily: T.fontDisplay,
           color: T.accent,
-          fontSize: "32px",
-          lineHeight: "36px",
           letterSpacing: "-0.8px",
         }}
       >
         {big}
       </p>
       <h3
-        className="mt-4 text-[15px] font-medium"
+        className="mt-4 text-[16px] font-medium leading-[24px]"
         style={{
           color: T.ink,
           fontFamily: T.fontDisplay,
-          letterSpacing: "-0.225px",
+          letterSpacing: "-0.24px",
         }}
       >
         {heading}
       </h3>
       <p
-        className="mt-2 text-[13px] leading-[20px]"
-        style={{ color: T.inkSoft, letterSpacing: "-0.13px" }}
+        className="mt-2 text-[16px] leading-[24px]"
+        style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
       >
         {body}
       </p>
@@ -2370,11 +2719,11 @@ function FAQ() {
                   aria-expanded={isOpen}
                 >
                   <span
-                    className="text-[15px] font-medium"
+                    className="text-[16px] font-medium leading-[24px]"
                     style={{
                       color: T.ink,
                       fontFamily: T.fontDisplay,
-                      letterSpacing: "-0.225px",
+                      letterSpacing: "-0.24px",
                     }}
                   >
                     {f.q}
@@ -2407,10 +2756,10 @@ function FAQ() {
                   }}
                 >
                   <p
-                    className="overflow-hidden px-6 text-[14px] leading-[24px]"
+                    className="overflow-hidden px-6 text-[16px] leading-[24px]"
                     style={{
                       color: T.inkSoft,
-                      letterSpacing: "-0.14px",
+                      letterSpacing: "-0.24px",
                       maxWidth: "640px",
                       paddingBottom: isOpen ? "24px" : "0px",
                       transition: "padding-bottom 300ms ease-out",
@@ -2447,29 +2796,20 @@ function FinalCTA() {
         }}
       >
         <div className="text-center">
-          <p
-            className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-            style={{ color: "rgba(255,255,255,0.65)" }}
-          >
-            Ready when you are
-          </p>
-          <h2
-            className="mx-auto mt-3 max-w-[640px] text-balance text-white"
+          <h1
+            className="mx-auto max-w-[720px] text-balance text-center text-white text-[40px] leading-[44px] tracking-[-1px] md:text-[56px] md:leading-[56px] md:tracking-[-1.4px]"
             style={{
               fontFamily: T.fontDisplay,
-              fontSize: "clamp(28px, 4vw, 40px)",
-              lineHeight: "1.1",
-              letterSpacing: "-0.025em",
               fontWeight: 500,
             }}
           >
             Stronger security now. Smoother audits later.
-          </h2>
+          </h1>
           <p
-            className="mx-auto mt-4 max-w-[520px] text-[14px] leading-[24px]"
+            className="mx-auto mt-4 max-w-[560px] text-[16px] leading-[24px] md:text-[18px] md:leading-[26px]"
             style={{
               color: "rgba(255,255,255,0.78)",
-              letterSpacing: "-0.14px",
+              letterSpacing: "-0.24px",
             }}
           >
             Cloud, app, endpoint, and network protection live in days. SOC 2
@@ -2635,13 +2975,13 @@ function IllusCertScene() {
           style={{ background: T.surface, boxShadow: E.card }}
         >
           <p
-            className="text-[9px] font-semibold uppercase tracking-[0.14em]"
+            className="text-[12px] font-medium leading-[16px]"
             style={{ color: T.inkSubtle }}
           >
             SOC 2 Type II · Readiness
           </p>
           <p
-            className="mt-1.5 text-[12px] font-medium"
+            className="mt-1.5 text-[14px] font-medium leading-[20px]"
             style={{ color: T.ink }}
           >
             142 controls auto-mapped
@@ -2678,7 +3018,7 @@ function IllusCertScene() {
         >
           <div className="text-center">
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.14em]"
+              className="text-[14px] font-medium leading-[16px]"
               style={{ color: T.accent }}
             >
               Audit
@@ -2686,7 +3026,7 @@ function IllusCertScene() {
               Ready
             </p>
             <p
-              className="mt-1 text-[8px] font-medium tracking-[0.08em]"
+              className="mt-1 text-[11px] font-medium leading-[14px]"
               style={{ color: T.accent, opacity: 0.7 }}
             >
               06/2026
@@ -2866,13 +3206,13 @@ function IllusEndpoint() {
               boxShadow: E.buttonBrand,
             }}
           >
-            <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/70">
+            <p className="text-[10px] font-medium text-white/65 leading-[14px]">
               Endpoint
             </p>
-            <p className="mt-2 text-[11px] font-medium text-white">
+            <p className="mt-2 text-[12px] font-medium text-white leading-[16px]">
               MacBook Pro · Encrypted
             </p>
-            <p className="mt-0.5 text-[8px] text-white/65">
+            <p className="mt-0.5 text-[10px] text-white/65 leading-[14px]">
               Active · Posture verified
             </p>
             <div className="mt-4 flex justify-end">
@@ -2928,22 +3268,22 @@ function IllusVAPT() {
           style={{ background: T.panel }}
         >
           <div className="flex items-center justify-between">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em]"
+            <p className="text-[10px] font-medium leading-[14px]"
               style={{ color: T.inkSubtle }}>
               VAPT · Day 7
             </p>
             <span
-              className="rounded-full px-1.5 py-0.5 text-[7px] font-semibold uppercase tracking-[0.1em]"
+              className="rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-[14px]"
               style={{ background: "rgba(40,93,245,0.10)", color: T.accent }}
             >
               Done
             </span>
           </div>
-          <p className="mt-2 text-[12px] font-medium"
+          <p className="mt-2 text-[12px] font-medium leading-[16px]"
             style={{ color: T.ink }}>
             7 critical findings
           </p>
-          <p className="text-[9px]" style={{ color: T.inkSoft }}>
+          <p className="text-[10px] leading-[14px]" style={{ color: T.inkSoft }}>
             7 fixed · 0 open
           </p>
           <div className="mt-3 h-1 w-full overflow-hidden rounded-full"
@@ -3094,8 +3434,8 @@ function Footer() {
               className="h-[22px] w-auto"
             />
             <p
-              className="mt-4 max-w-[34ch] text-[13px] leading-[20px]"
-              style={{ color: T.inkSoft, letterSpacing: "-0.13px" }}
+              className="mt-4 max-w-[40ch] text-[16px] leading-[24px]"
+              style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
             >
               One platform for cloud, app, endpoint, and network security,
               with built-in compliance, VAPT, and security questionnaires.
@@ -3232,7 +3572,7 @@ function FooterColumn({
   return (
     <div>
       <p
-        className="mb-4 text-[11px] font-semibold uppercase tracking-[0.12em]"
+        className="mb-4 text-[14px] font-medium leading-[20px]"
         style={{ color: T.inkSubtle }}
       >
         {heading}
@@ -3242,8 +3582,8 @@ function FooterColumn({
           <li key={it}>
             <Link
               href="#"
-              className="text-[13px] transition-colors hover:underline"
-              style={{ color: T.ink, letterSpacing: "-0.13px" }}
+              className="text-[14px] leading-[20px] transition-colors hover:underline"
+              style={{ color: T.ink }}
             >
               {it}
             </Link>
@@ -3257,12 +3597,11 @@ function FooterColumn({
 function CertChip({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="inline-flex items-center gap-x-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+      className="inline-flex items-center gap-x-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-[20px]"
       style={{
         background: T.surface,
         boxShadow: E.ringOnly,
         color: T.inkSoft,
-        letterSpacing: "-0.018px",
       }}
     >
       <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -3281,17 +3620,18 @@ function CertChip({ children }: { children: React.ReactNode }) {
 
 // ─── Shared primitives ────────────────────────────────────────────────
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  // AG: text-2xl mobile (24px / -0.36px), text-3xl/[36px] desktop (30px / -0.75px)
+  // H2 uses fluid clamp between mobile (32) and desktop (40). Tracking
+  // and leading scale with size via em-based units.
   return (
     <h2
       className="text-balance md:text-center md:px-10"
       style={{
         fontFamily: T.fontDisplay,
-        fontSize: "clamp(24px, 3vw, 30px)",
-        lineHeight: "36px",
-        letterSpacing: "-0.75px",
         fontWeight: 500,
         color: T.ink,
+        fontSize: "clamp(32px, 4vw, 40px)",
+        lineHeight: 1.1,
+        letterSpacing: "-0.025em",
       }}
     >
       {children}
