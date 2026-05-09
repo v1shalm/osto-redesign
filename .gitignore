@@ -33,3 +33,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+
+# Local screenshots produced by agent-browser during dev — never commit
+*.png
+!public/**/*.png

@@ -65,7 +65,7 @@ const TABS: Tab[] = [
   { key: "vapt", label: "Pen-test findings" },
 ];
 
-export function OstoHero() {
+export function OstoHeroV1() {
   const [view, setView] = useState<ViewKey>("security");
   const [paused, setPaused] = useState(false);
   const userInteracted = useRef(false);
