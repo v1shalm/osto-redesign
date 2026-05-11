@@ -11,6 +11,16 @@
 html {
   color-scheme: light;
   scroll-behavior: smooth;
+  /* Off-white page base — a touch warm so the four brand accents
+     (cyan, electric blue, violet, soft pink) feel grounded against
+     paper rather than clinical white. Pure #fff would read as flat. */
+  background: #fafafa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 html,
@@ -22,10 +32,23 @@ body {
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  background: #fafafa;
+  color: #1a1a22;
+  position: relative;
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Selection — tinted to the brand electric-blue accent. */
+::selection {
+  background: rgba(59, 130, 246, 0.18);
+  color: #08080d;
 }

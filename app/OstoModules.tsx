@@ -1,2328 +1,1363 @@
 "use client";
 
 /**
- * Tabbed module gallery — every osto module, organized by category, with
- * a motion illustration on each active tile. Inactive tabs render their
- * tiles as dimmed outline placeholders with module numbers.
+ * Resonate — 2×2 bento feature grid.
  *
- * Layout pattern follows the reference: 4-column grid, dashed-grid frame
- * around the section, soft active-tile illustrations that animate on
- * mount + when the active tab changes, color of the tab + active tiles
- * shifts per category.
+ * Four tiles, each animating a product-UI fragment on loop:
+ *   1. Streaming console — `> resonate.stream("hello")` with a live
+ *      waveform and "speaking · · ·" indicator.
+ *   2. Phoneme alignment — IPA token row where the active token + a
+ *      playhead step from token 1 → 7 in sequence; waveform breathes.
+ *   3. Voice cloning — multi-step status cycle (scanning → building →
+ *      cloning → ready), with the voice card highlighting on completion.
+ *   4. Two-channel transcript — 3 turn-pairs cycle (caller speaks →
+ *      agent responds with a tool call).
+ *
+ * Tiles share inner hairlines and meet at a cross with four small
+ * inset notches (Vite-style pinwheel detail). Animations are
+ * transform-only / opacity-only and respect prefers-reduced-motion.
  */
 
-import { useEffect, useState } from "react";
-
-// ─── Categories ───────────────────────────────────────────────────────
-type CatKey = "cloud" | "application" | "endpoint" | "network" | "compliance";
-
-type Module = {
-  num: string;
-  title: string;
-  desc: string;
-  illus: (color: string) => React.ReactNode;
+// ─── PALETTE — single source of truth (mirrors OstoHeroV2) ────────────
+// Edit values here to re-theme the bento. Every other token is derived.
+const PALETTE = {
+  page:        "#fafafa",
+  surface:     "#ffffff",
+  panel:       "#f4f4f6",
+  ink:         "#0a0a10",
+  inkStrong:   "#1a1a22",
+  inkSoft:     "#3a3a48",
+  inkMid:      "#5a5a6e",
+  inkSubtle:   "#737386",
+  inkFaint:    "#a0a0b0",
+  ring:        "rgba(10,10,16,0.08)",
+  ringStrong:  "rgba(10,10,16,0.14)",
+  ringFaint:   "rgba(10,10,16,0.04)",
+  // Brand. Only one accent — everything else is white / grays / black.
+  blue:        "#3b82f6",
+  blueDeep:    "#2563eb",
+  blueDark:    "#1d4ed8",
+  // Legacy slots kept as aliases so existing illustrations don't break.
+  // All four resolve to the same brand blue now.
+  cyan:        "#3b82f6",
+  violet:      "#3b82f6",
+  pink:        "#3b82f6",
 };
 
-type Category = {
-  key: CatKey;
-  label: string;
-  color: string;
-  colorSoft: string;
-  modules: Module[];
-};
-
-// Single brand color for all categories. Finta-discipline: one accent, one
-// neutral palette, no per-category color theming.
-const BRAND = "#1c267a";
-const BRAND_SOFT = "rgba(28,38,122,0.10)";
-
-const CATS: Category[] = [
-  {
-    key: "cloud",
-    label: "Cloud",
-    color: BRAND,
-    colorSoft: BRAND_SOFT,
-    modules: [
-      {
-        num: "01",
-        title: "Cloud Posture (CSPM)",
-        desc: "Scan AWS, Azure, GCP for misconfigs and drift.",
-        illus: (c) => <IllusCSPM color={c} />,
-      },
-      {
-        num: "02",
-        title: "Web App Protection",
-        desc: "OWASP Top 10, DDoS, bot blocking, virtual patching.",
-        illus: (c) => <IllusWAF color={c} />,
-      },
-      {
-        num: "03",
-        title: "Web API Protection",
-        desc: "Shadow API discovery, schema enforcement, malicious traffic.",
-        illus: (c) => <IllusAPI color={c} />,
-      },
-    ],
-  },
-  {
-    key: "application",
-    label: "Application",
-    color: BRAND,
-    colorSoft: BRAND_SOFT,
-    modules: [
-      {
-        num: "04",
-        title: "Web App Scanner",
-        desc: "Continuously scan internet-facing apps for exploitable issues.",
-        illus: (c) => <IllusWebScan color={c} />,
-      },
-      {
-        num: "05",
-        title: "Mobile App Scanner",
-        desc: "Assess mobile app builds for weaknesses before release.",
-        illus: (c) => <IllusMobile color={c} />,
-      },
-      {
-        num: "06",
-        title: "SAST / SBOM",
-        desc: "Static analysis and software bill of materials.",
-        illus: (c) => <IllusSAST color={c} />,
-      },
-    ],
-  },
-  {
-    key: "endpoint",
-    label: "Endpoint",
-    color: BRAND,
-    colorSoft: BRAND_SOFT,
-    modules: [
-      {
-        num: "07",
-        title: "Endpoint Antimalware",
-        desc: "Real-time malware detection, ransomware prevention.",
-        illus: (c) => <IllusAntimalware color={c} />,
-      },
-      {
-        num: "08",
-        title: "Disk Encryption",
-        desc: "Protect startup devices and sensitive data at rest.",
-        illus: (c) => <IllusDiskEnc color={c} />,
-      },
-      {
-        num: "09",
-        title: "App Control",
-        desc: "Reduce unauthorized execution risk on every device.",
-        illus: (c) => <IllusAppControl color={c} />,
-      },
-      {
-        num: "10",
-        title: "Device Control",
-        desc: "Block USB peripherals and removable media.",
-        illus: (c) => <IllusDeviceControl color={c} />,
-      },
-      {
-        num: "11",
-        title: "File Access DLP",
-        desc: "Protect sensitive files with access controls.",
-        illus: (c) => <IllusDLP color={c} />,
-      },
-      {
-        num: "12",
-        title: "Screen Lock",
-        desc: "Enforce automatic device lock and idle protection.",
-        illus: (c) => <IllusScreenLock color={c} />,
-      },
-      {
-        num: "13",
-        title: "Swipe Clean",
-        desc: "Remote wipe and cleanup actions for managed devices.",
-        illus: (c) => <IllusSwipe color={c} />,
-      },
-    ],
-  },
-  {
-    key: "network",
-    label: "Network",
-    color: BRAND,
-    colorSoft: BRAND_SOFT,
-    modules: [
-      {
-        num: "14",
-        title: "ZTNA Secure Access",
-        desc: "Zero Trust with 2FA, time-based permissions, instant blocking.",
-        illus: (c) => <IllusZTNA color={c} />,
-      },
-      {
-        num: "15",
-        title: "Domain Filtering",
-        desc: "Block malicious domains and enforce browsing policies.",
-        illus: (c) => <IllusDomain color={c} />,
-      },
-    ],
-  },
-  {
-    key: "compliance",
-    label: "Compliance",
-    color: BRAND,
-    colorSoft: BRAND_SOFT,
-    modules: [
-      {
-        num: "16",
-        title: "AI Security Q&A",
-        desc: "Pre-fill questionnaires in 5 minutes at 99% precision.",
-        illus: (c) => <IllusAIQA color={c} />,
-      },
-      {
-        num: "17",
-        title: "Compliance Automation",
-        desc: "Continuously mapped controls and evidence collection.",
-        illus: (c) => <IllusCompliance color={c} />,
-      },
-      {
-        num: "18",
-        title: "Security Awareness Training",
-        desc: "Train employees and keep participation evidence audit-ready.",
-        illus: (c) => <IllusTraining color={c} />,
-      },
-      {
-        num: "19",
-        title: "Logs Analyzer",
-        desc: "Centralized logs and audit-ready posture across modules.",
-        illus: (c) => <IllusLogs color={c} />,
-      },
-      {
-        num: "20",
-        title: "VAPT",
-        desc: "OSCP-led engineers · 1–2 week delivery.",
-        illus: (c) => <IllusVAPT color={c} />,
-      },
-    ],
-  },
-];
-
-// Match V2's global rail inset so the grid spans edge-to-edge to the rails.
-const RAIL_INSET = "max(24px, calc((100vw - 1240px) / 2))";
-
-// Tokens — match V2's AG-derived system
 const T = {
-  ink: "#26262b",
-  inkSoft: "#5e5f6b",
-  inkSubtle: "#92939e",
-  inkFaint: "#b8b9c1",
-  panel: "#f7f7f8",
-  surface: "#ffffff",
-  ring: "rgba(38,38,43,0.08)",
-  hairline: "#eeeef0",
+  ink:        PALETTE.ink,
+  inkStrong:  PALETTE.inkStrong,
+  inkSoft:    PALETTE.inkSoft,
+  inkMid:     PALETTE.inkMid,
+  inkSubtle:  PALETTE.inkSubtle,
+  inkFaint:   PALETTE.inkFaint,
+  inkLine:    PALETTE.ring,
+  panel:      PALETTE.panel,
+  surface:    PALETTE.surface,
+  ring:       PALETTE.ring,
+  hairline:   PALETTE.ringFaint,
 };
+
+// Single brand accent. Within illustrations we vary value (light blue
+// tint vs full blue) and lean on gray for the quietest layer, so a
+// mono palette still has visual depth.
+const BRAND        = PALETTE.blue;     // electric blue (primary)
+const BRAND_SOFT   = "#93c5fd";        // light blue tint — secondary fills
+const BRAND_DEEP   = PALETTE.blueDeep; // darker blue — emphasis
 
 const E = {
-  card: "0 0 0 1px rgba(38,38,43,0.08)",
-  ringOnly: "0 0 0 1px rgba(38,38,43,0.08)",
+  card: `0 0 0 1px ${PALETTE.ring}, 0 1px 2px rgba(10,10,16,0.04)`,
+  cardElev:
+    `0 0 0 1px ${PALETTE.ring}, 0 8px 24px -12px rgba(10,10,16,0.10), 0 24px 48px -24px rgba(10,10,16,0.10)`,
 };
+
+// V2 page-rail tokens — duplicated locally so the bento can anchor
+// edge-to-edge to the same rails as HowItWorks and FinalCTA.
+const RAIL_INSET = "max(24px, calc((100vw - 1240px) / 2))";
+const RAIL_STROKE = PALETTE.ring;
 
 // ─── Section ──────────────────────────────────────────────────────────
 export function OstoModules() {
-  const [active, setActive] = useState<CatKey>("cloud");
-  // Bumping `cycle` re-mounts illustrations on tab change so animations restart
-  const [cycle, setCycle] = useState(0);
-
-  const cat = CATS.find((c) => c.key === active)!;
-
-  useEffect(() => {
-    setCycle((n) => n + 1);
-  }, [active]);
-
-  // Only render the active category's modules. The grid column count
-  // adapts to the module count so we never render empty/placeholder
-  // tiles. Categories with 1–3 modules center on a single row; larger
-  // sets wrap into a 3-up grid that fills cleanly.
-  const tiles = cat.modules.map((m) => ({ mod: m, cat }));
-  const cols = Math.min(tiles.length, 3);
-
   return (
-    <section className="pt-4" style={{ color: T.ink }}>
+    <section style={{ color: T.ink }}>
+      {/* Heading — stays in the centered max-width wrapper */}
       <div className="mx-auto max-w-[1240px] px-6">
-        {/* Eyebrow + Heading */}
         <div className="text-center">
-          <span
-            className="inline-flex items-center text-[12px] font-medium leading-[20px]"
-            style={{ color: T.inkSubtle, letterSpacing: "-0.018px" }}
-          >
-            Every module, built in-house
-          </span>
           <h2
-            className="mx-auto mt-4 max-w-[720px] text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:mt-5 md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
+            className="mx-auto max-w-[780px] text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[44px] md:leading-[48px] md:tracking-[-1.1px]"
             style={{
               fontFamily: "var(--font-sans)",
               fontWeight: 500,
               color: T.ink,
             }}
           >
-            Twenty modules. <span style={{ color: BRAND }}>One platform.</span>
+            Four pieces of the voice agent,
+            handled inside one&nbsp;<span style={{ color: BRAND }}>SDK</span>.
           </h2>
           <p
-            className="mx-auto mt-4 max-w-[560px] text-[16px] leading-[24px] md:text-[18px] md:leading-[26px]"
-            style={{
-              color: T.inkSoft,
-              letterSpacing: "-0.18px",
-            }}
+            className="mx-auto mt-5 max-w-[560px] text-pretty text-[16px] leading-[24px] md:text-[17px] md:leading-[26px]"
+            style={{ color: T.inkSoft, letterSpacing: "-0.18px" }}
           >
-            Cloud, app, endpoint, network, compliance. Every layer of the stack, built and integrated by Osto.
+            Streaming speech, voice cloning, turn-taking, and bi-directional
+            audio on a single stream you bill from one&nbsp;vendor.
           </p>
         </div>
-
-        {/* Tabs — Finta-style segmented control: neutral track, white active
-            pill with subtle shadow. Single tab style, no per-category color. */}
-        <div className="mt-10 flex justify-center">
-          <div
-            role="tablist"
-            aria-label="Module categories"
-            className="inline-flex items-center gap-x-0.5 rounded-full p-1"
-            style={{
-              background: T.panel,
-              boxShadow: "inset 0 0 0 1px rgba(38,38,43,0.06)",
-            }}
-          >
-            {CATS.map((c) => {
-              const isActive = c.key === active;
-              return (
-                <button
-                  key={c.key}
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => setActive(c.key)}
-                  className="relative whitespace-nowrap rounded-full px-3.5 py-1.5 text-[14px] font-medium leading-[20px] transition-[background-color,color,box-shadow] duration-200 ease-out active:scale-[0.96]"
-                  style={{
-                    background: isActive ? T.surface : "transparent",
-                    color: isActive ? T.ink : T.inkSoft,
-                    boxShadow: isActive
-                      ? "0 0 0 1px rgba(38,38,43,0.06), 0 1px 2px rgba(38,38,43,0.06)"
-                      : "none",
-                  }}
-                >
-                  {c.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
       </div>
 
-      {/* Module grid — edge-to-edge to the global rails. No outer card,
-          no rounded container, no stroke. Hairline column/row separators
-          are rendered as inset shadows on every tile; we strip the
-          right-most column's right hairline per breakpoint via CSS rules
-          keyed on data-cols. cols comes from JS (1, 2, or 3). */}
-      <style>{`
-        .osto-modgrid > * {
-          box-shadow:
-            inset -0.5px 0 0 0 ${T.hairline},
-            inset 0 -0.5px 0 0 ${T.hairline};
-        }
-        /* mobile: 1 col → strip every right hairline */
-        .osto-modgrid > *:nth-child(1n) {
-          box-shadow: inset 0 -0.5px 0 0 ${T.hairline};
-        }
-        @media (min-width: 640px) {
-          .osto-modgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .osto-modgrid > * {
-            box-shadow:
-              inset -0.5px 0 0 0 ${T.hairline},
-              inset 0 -0.5px 0 0 ${T.hairline};
-          }
-          .osto-modgrid > *:nth-child(2n) {
-            box-shadow: inset 0 -0.5px 0 0 ${T.hairline};
-          }
-        }
-        @media (min-width: 768px) {
-          .osto-modgrid[data-cols="1"] { grid-template-columns: 1fr; }
-          .osto-modgrid[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .osto-modgrid[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-          .osto-modgrid > * {
-            box-shadow:
-              inset -0.5px 0 0 0 ${T.hairline},
-              inset 0 -0.5px 0 0 ${T.hairline};
-          }
-          .osto-modgrid[data-cols="1"] > *:nth-child(1n) { box-shadow: inset 0 -0.5px 0 0 ${T.hairline}; }
-          .osto-modgrid[data-cols="2"] > *:nth-child(2n) { box-shadow: inset 0 -0.5px 0 0 ${T.hairline}; }
-          .osto-modgrid[data-cols="3"] > *:nth-child(3n) { box-shadow: inset 0 -0.5px 0 0 ${T.hairline}; }
-        }
-      `}</style>
+      {/* Bento — full-bleed: extends edge-to-edge to V2's global page rails.
+          + 1px margin inside the rail line keeps the rail visible as a
+          hairline boundary on each side. Top + bottom inset hairlines
+          ground the grid against the rails. No outer radius; no shadow
+          (the section is itself the surface, not a card on the page). */}
       <div
-        key={cycle}
-        data-cols={cols}
-        className="osto-modgrid grid grid-cols-1 mt-10"
+        className="relative mt-12 overflow-hidden md:mt-16"
         style={{
+          background: T.surface,
           marginLeft: `calc(${RAIL_INSET} + 1px)`,
           marginRight: `calc(${RAIL_INSET} + 1px)`,
-          borderTop: `0.5px solid ${T.hairline}`,
-          borderBottom: `0.5px solid ${T.hairline}`,
+          boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
         }}
       >
-        {tiles.map((t, i) => (
-          <ModuleTile
-            key={`${cycle}-${i}`}
-            module={t.mod}
-            cat={t.cat}
-            borderRight={false}
-            borderBottom={false}
-            delay={i * 60}
-          />
-        ))}
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          <BentoCell side="tl">
+            <BentoCopy
+              title="Streaming on one socket"
+              desc="TTS, STT, and turn-taking share one stream. Your agent answers the moment the first token is ready."
+            />
+            <BentoIllusContainer>
+              <IllusWaveform accent={BRAND} />
+            </BentoIllusContainer>
+          </BentoCell>
+
+          <BentoCell side="tr">
+            <BentoCopy
+              title="Phoneme-aligned speech"
+              desc="The model paces itself on syllables rather than tokens, so emphasis lands on the words you'd stress in conversation."
+            />
+            <BentoIllusContainer>
+              <IllusPhoneme accent={BRAND} />
+            </BentoIllusContainer>
+          </BentoCell>
+
+          <BentoCell side="bl">
+            <BentoCopy
+              title="Voice cloning in 30 seconds"
+              desc="Upload a clip, get a voice that carries its pitch and prosody across all 32 languages we support."
+            />
+            <BentoIllusContainer>
+              <IllusFingerprint accent={BRAND} />
+            </BentoIllusContainer>
+          </BentoCell>
+
+          <BentoCell side="br">
+            <BentoCopy
+              title="Talks and listens at once"
+              desc="Your agent keeps the inbound stream open while it speaks. When the caller cuts in, it yields and picks back up where it left&nbsp;off."
+            />
+            <BentoIllusContainer>
+              <IllusConversation accent={BRAND} />
+            </BentoIllusContainer>
+          </BentoCell>
+        </div>
+
+        {/* Intersection notches — four small inset triangles at the
+            inner cross. Each notch is a square pinned to one inner
+            corner with a panel-colored triangle rotated to point
+            inward, creating the Vite "pinwheel" detail. Only visible
+            on md+ where the 2×2 cross exists. */}
+        <BentoNotches />
       </div>
     </section>
   );
 }
 
-// ─── Tile ─────────────────────────────────────────────────────────────
-function ModuleTile({
-  module,
-  cat,
-  borderRight,
-  borderBottom,
-  delay,
+// ─── Bento primitives ─────────────────────────────────────────────────
+
+/**
+ * BentoCell — a 1/4 cell of the 2×2 frame. Draws inner hairlines on the
+ * edges that face the cross (right for left cells, bottom for top cells)
+ * so tiles share borders without doubling up. The outer frame has its
+ * own hairline ring already.
+ */
+function BentoCell({
+  side,
+  children,
 }: {
-  module: Module;
-  cat: Category;
-  borderRight: boolean;
-  borderBottom: boolean;
-  delay: number;
+  side: "tl" | "tr" | "bl" | "br";
+  children: React.ReactNode;
 }) {
-  // Compose hairline borders. When both flags are false, omit boxShadow
-  // entirely so the parent grid's CSS rules can apply per-breakpoint
-  // hairlines (an empty string would override the cascade).
-  const shadow = [
-    borderRight ? `inset -0.5px 0 0 0 ${T.hairline}` : "",
-    borderBottom ? `inset 0 -0.5px 0 0 ${T.hairline}` : "",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  // Inset hairlines on the edges that face the cross
+  const isTop = side === "tl" || side === "tr";
+  const isLeft = side === "tl" || side === "bl";
+  const shadows: string[] = [];
+  if (isTop) shadows.push(`inset 0 -0.5px 0 0 ${T.hairline}`); // bottom edge
+  if (isLeft) shadows.push(`inset -0.5px 0 0 0 ${T.hairline}`); // right edge
+
   return (
     <article
-      className="relative flex h-[340px] flex-col p-6"
+      className="relative flex flex-col overflow-hidden"
       style={{
-        background: T.surface,
-        ...(shadow ? { boxShadow: shadow } : {}),
+        minHeight: 440,
+        boxShadow: shadows.join(", "),
       }}
     >
-      <div
-        className="osto-tile-fade"
-        style={{ animationDelay: `${delay}ms` }}
-      >
-        <h3
-          className="text-[16px] font-medium leading-[24px]"
-          style={{
-            fontFamily: "var(--font-sans)",
-            color: T.ink,
-            letterSpacing: "-0.24px",
-          }}
-        >
-          {module.title}
-        </h3>
-        <p
-          className="mt-1 max-w-[260px] text-[14px] leading-[20px]"
-          style={{
-            color: T.inkSoft,
-            letterSpacing: "-0.14px",
-          }}
-        >
-          {module.desc}
-        </p>
-      </div>
-
-      <div
-        className="osto-tile-rise relative mt-auto overflow-hidden"
-        style={{
-          animationDelay: `${delay + 100}ms`,
-          height: "180px",
-        }}
-      >
-        {module.illus(cat.color)}
-      </div>
+      <div className="relative flex h-full w-full flex-col">{children}</div>
     </article>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// ILLUSTRATIONS — Attio-style design system.
-//
-// Four archetypes, mixed across the 20 modules:
-//   1. Wireframe isometric line drawings  — 1px ink stroke, no fill,
-//      dashed lines for hidden edges. "Engineering blueprint" feel.
-//   2. Real-product UI chrome             — cropped, framed app cards
-//      that float on the dotted grid behind the tile.
-//   3. Connected-node diagrams            — pill chips connected to a
-//      central card by curved 1px paths.
-//   4. Color-on-data bar charts            — bars carry the only color;
-//      everything around them is grey.
-//
-// Color discipline: the category `color` is reserved for DATA marks
-// only (status dots, chart bars, "live" pills). Every structural
-// stroke is the muted ink ramp.
-// ═══════════════════════════════════════════════════════════════════════
-
-const STROKE = "#92939e"; // ink-subtle, primary line color
-const STROKE_SOFT = "#cdced3"; // softer line for hidden / secondary edges
-const FILL_BG = "#ffffff";
-// ═══════════════════════════════════════════════════════════════════════
-// Finta-style illustrations — every module gets one or two product-UI
-// cards floating on the gradient backdrop. Cards are realistic in
-// proportion + content; color is reserved for status/data marks.
-// ═══════════════════════════════════════════════════════════════════════
-
-const CARD_SHADOW =
-  "0 0 0 1px rgba(38,38,43,0.06), 0 1px 2px 0 rgba(38,38,43,0.04), 0 6px 16px -8px rgba(38,38,43,0.12)";
-const CARD_RADIUS = 10;
-
-/**
- * FintaCard — base product UI fragment. White card, soft shadow, 1px
- * ring. Optional tilt/offset so multiple stacked cards feel "scattered"
- * the way Finta lays them out (not perfectly grid-aligned).
- */
-function FintaCard({
-  children,
-  className = "",
-  style,
+function BentoCopy({
+  title,
+  desc,
 }: {
-  children?: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
+  title: string;
+  desc: string;
 }) {
   return (
-    <div
-      className={className}
-      style={{
-        background: "#ffffff",
-        boxShadow: CARD_SHADOW,
-        borderRadius: CARD_RADIUS,
-        ...style,
-      }}
-    >
+    <div className="px-7 pt-8 md:px-12 md:pt-12">
+      <h3
+        className="text-balance text-[20px] font-medium leading-[26px] md:text-[24px] md:leading-[30px]"
+        style={{
+          fontFamily: "var(--font-sans)",
+          color: T.ink,
+          letterSpacing: "-0.5px",
+        }}
+      >
+        {title}
+      </h3>
+      <p
+        className="mt-3 max-w-[48ch] text-pretty text-[14px] leading-[22px] md:text-[15px] md:leading-[24px]"
+        style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
+      >
+        {desc}
+      </p>
+    </div>
+  );
+}
+
+function BentoIllusContainer({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative mt-auto h-[220px] w-full overflow-hidden md:h-[260px]">
       {children}
     </div>
   );
 }
 
-// ── FlowIllus ──────────────────────────────────────────────────────
-// Connected-node flow: 3 input chips on the left, a central circular gate
-// with an icon, and one outcome callout on the right. Three dashed neutral
-// paths trace the routine flow; one solid brand path traces the meaningful
-// outcome (the thing this module actually catches/does).
-//
-// This is the single shape used for every module — same visual rhythm,
-// different content. The "story" comes from the inputs, the gate icon, and
-// the outcome.
-
-type GateIcon =
-  | "shield-check"   // CSPM, DiskEnc, ZTNA — verified / hardened
-  | "shield-block"   // WAF, Domain — blocked
-  | "schema"         // API — schema/contract
-  | "scan"           // WebScan, Mobile, SAST, Antimalware — scanner
-  | "policy"         // AppControl, DeviceControl, Compliance — policy/rules
-  | "mask"           // DLP — masking
-  | "clock"          // ScreenLock — idle
-  | "wipe"           // Swipe — erase
-  | "ai"             // AIQA — sparkle
-  | "graduation"     // Training — checked answer
-  | "logs"           // Logs — stream
-  | "target"         // VAPT — pen-test target
-  ;
-
-function GateIconSvg({ icon, color }: { icon: GateIcon; color: string }) {
-  switch (icon) {
-    case "shield-check":
-      return (
-        <>
-          <path d="M9 1.5 L15 4 V9 C15 12.5 12.5 14.7 9 16 C5.5 14.7 3 12.5 3 9 V4 Z" fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
-          <path d="m6.4 9 1.8 1.8L11.6 7.2" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-        </>
-      );
-    case "shield-block":
-      return (
-        <>
-          <path d="M9 1.5 L15 4 V9 C15 12.5 12.5 14.7 9 16 C5.5 14.7 3 12.5 3 9 V4 Z" fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
-          <path d="m6.5 6.5 5 5 m0-5-5 5" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      );
-    case "schema":
-      return (
-        <>
-          <rect x="3.5" y="3.5" width="11" height="11" rx="2" stroke={color} strokeWidth="1.4" fill="none" />
-          <path d="M3.5 7.5 H14.5 M3.5 11 H14.5" stroke={color} strokeWidth="1.2" />
-          <circle cx="6" cy="9.25" r="0.7" fill={color} />
-        </>
-      );
-    case "scan":
-      return (
-        <>
-          <circle cx="8" cy="8" r="4.5" stroke={color} strokeWidth="1.4" fill="none" />
-          <path d="m11.5 11.5 3.5 3.5" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
-          <circle cx="8" cy="8" r="1.4" fill={color} />
-        </>
-      );
-    case "policy":
-      return (
-        <>
-          <path d="M4 3 H12 L14 5 V14 a1 1 0 0 1 -1 1 H4 Z" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-          <path d="M6 8 H12 M6 11 H10" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      );
-    case "mask":
-      return (
-        <>
-          <path d="M2 9 C2 6 5 4 9 4 C13 4 16 6 16 9 C16 12 13 14 9 14 C5 14 2 12 2 9 Z" stroke={color} strokeWidth="1.4" fill="none" />
-          <circle cx="9" cy="9" r="2" fill={color} />
-          <path d="m4.5 4.5 9 9" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      );
-    case "clock":
-      return (
-        <>
-          <circle cx="9" cy="9" r="6" stroke={color} strokeWidth="1.4" fill="none" />
-          <path d="M9 5.5 V9 L11.5 10.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      );
-    case "wipe":
-      return (
-        <>
-          <path d="M4 5 H14 L13 14 a1 1 0 0 1 -1 1 H6 a1 1 0 0 1 -1 -1 Z" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-          <path d="M7 5 V3.5 a1 1 0 0 1 1 -1 H10 a1 1 0 0 1 1 1 V5" stroke={color} strokeWidth="1.4" />
-          <path d="M8 8 V12 M10 8 V12" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
-        </>
-      );
-    case "ai":
-      return (
-        <>
-          <path d="M9 2 L10.4 6.6 L15 8 L10.4 9.4 L9 14 L7.6 9.4 L3 8 L7.6 6.6 Z" fill={color} />
-          <circle cx="14" cy="13.5" r="1" fill={color} opacity="0.7" />
-        </>
-      );
-    case "graduation":
-      return (
-        <>
-          <path d="M2 7 L9 4 L16 7 L9 10 Z" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-          <path d="M5 8.5 V12 C5 13 7 14 9 14 C11 14 13 13 13 12 V8.5" stroke={color} strokeWidth="1.4" fill="none" />
-          <path d="M16 7 V11" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      );
-    case "logs":
-      return (
-        <>
-          <path d="M3 4 H15 M3 7 H15 M3 10 H11 M3 13 H13" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      );
-    case "target":
-      return (
-        <>
-          <circle cx="9" cy="9" r="6" stroke={color} strokeWidth="1.4" fill="none" />
-          <circle cx="9" cy="9" r="3" stroke={color} strokeWidth="1.4" fill="none" />
-          <circle cx="9" cy="9" r="1" fill={color} />
-        </>
-      );
-  }
-}
-
-type FlowInput = {
-  badge?: string;     // e.g. "GET", "iOS", "AWS"
-  label: string;      // e.g. "/users", "v2.4.1"
-};
-
-type FlowOutcome = {
-  eyebrow: string;    // small uppercase-feel label inside the callout
-  text: string;       // the meaningful result, brand-colored
-};
-
-function FlowIllus({
-  color,
-  inputs,
-  icon,
-  outcome,
-}: {
-  color: string;
-  inputs: FlowInput[];
-  icon: GateIcon;
-  outcome: FlowOutcome;
-}) {
-  const padInput = inputs.length === 2 ? 24 : 0; // narrower vertical span when only 2 inputs
+/**
+ * BentoNotches — Vite-style intersection detail. Four small inset
+ * triangles meet at the inner cross of the 2×2 grid. Each notch is
+ * a panel-colored triangle pointing outward from the cross center,
+ * which gives the seam a 4-petal pinwheel read.
+ *
+ * Hidden on mobile (single-column) since the cross only exists at md+.
+ */
+function BentoNotches() {
+  const size = 14; // px — notch size
+  // Each triangle is built with CSS borders so it inherits color cleanly.
+  // The container is centered absolutely at the grid's cross point.
   return (
-    <div className="absolute inset-0 flex items-center justify-center px-3">
-      <div className="relative h-[170px] w-full">
-        {/* Connecting paths */}
-        <svg viewBox="0 0 280 170" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
-          {inputs.map((_, i) => {
-            const top = inputs.length === 1
-              ? 86
-              : inputs.length === 2
-                ? padInput + 18 + i * (170 - 2 * (padInput + 18) - 36)
-                : 38 + i * 48;
-            return (
-              <path
-                key={i}
-                d={`M52 ${top} C 110 ${top}, 110 86, 132 86`}
-                stroke={T.inkFaint}
-                strokeWidth="1"
-                fill="none"
-                strokeDasharray="2 3"
-              />
-            );
-          })}
-          {/* solid brand path — gate to outcome */}
-          <path
-            d="M158 86 C 200 86, 200 130, 230 130"
-            stroke={color}
-            strokeWidth="1.5"
-            fill="none"
-          />
-        </svg>
-
-        {/* Left column — input chips */}
-        <div
-          className={`absolute left-0 flex flex-col ${
-            inputs.length === 1 ? "h-full justify-center" : "justify-between"
-          }`}
-          style={
-            inputs.length === 2
-              ? { top: padInput, bottom: padInput }
-              : { top: 0, bottom: 0 }
-          }
-        >
-          {inputs.map((inp, i) => (
-            <FintaCard key={i} className="flex items-center gap-x-1.5 px-2 py-1">
-              {inp.badge && (
-                <span
-                  className="rounded text-[9px] font-bold tabular-nums"
-                  style={{
-                    background: T.panel,
-                    color: T.inkSoft,
-                    minWidth: "26px",
-                    textAlign: "center",
-                    padding: "2px 4px",
-                  }}
-                >
-                  {inp.badge}
-                </span>
-              )}
-              <span className="text-[10px] font-medium" style={{ color: T.ink }}>
-                {inp.label}
-              </span>
-            </FintaCard>
-          ))}
-        </div>
-
-        {/* Center — gate */}
-        <div
-          className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full"
-          style={{
-            background: "#fff",
-            boxShadow: `0 0 0 1px ${color}26, 0 4px 12px -4px ${color}33`,
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <GateIconSvg icon={icon} color={color} />
-          </svg>
-        </div>
-
-        {/* Right — outcome callout */}
-        <FintaCard
-          className="absolute bottom-2 right-0 px-2.5 py-1.5"
-          style={{
-            background: "#fff",
-            boxShadow: `0 0 0 1px ${color}33, 0 6px 14px -6px ${color}40`,
-          }}
-        >
-          <p
-            className="text-[9px] font-medium"
-            style={{ color: T.inkSubtle, letterSpacing: "0.04em" }}
-          >
-            {outcome.eyebrow}
-          </p>
-          <p
-            className="text-[11px] font-semibold"
-            style={{ color, letterSpacing: "-0.1px" }}
-          >
-            {outcome.text}
-          </p>
-        </FintaCard>
-      </div>
-    </div>
-  );
-}
-
-// ── Cloud category ─────────────────────────────────────────────────
-//
-// Each illustration is a different SURFACE of the Osto platform — not
-// abstract concepts. The visual rhythm of the section comes from mixing
-// surface types: an alert card, a live feed, a tabular inventory, a
-// settings panel, a notification toast, a chart, etc.
-
-// CSPM — Surface: finding alert card. Looks like an Osto dashboard
-// pulling up the most critical misconfig with a one-click auto-fix.
-function IllusCSPM({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* breadcrumb header */}
-        <div
-          className="flex items-center gap-x-1.5 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span className="text-[10px] font-medium" style={{ color: T.inkSubtle }}>
-            Cloud
-          </span>
-          <span style={{ color: T.inkFaint }}>›</span>
-          <span className="text-[10px] font-medium" style={{ color: T.inkSubtle }}>
-            AWS · prod
-          </span>
-          <span className="ml-auto flex items-center gap-x-1 text-[10px] font-medium" style={{ color: "#0d8050" }}>
-            <span className="osto-live h-1.5 w-1.5 rounded-full" style={{ background: "#19a974" }} />
-            scanning
-          </span>
-        </div>
-        {/* finding body */}
-        <div className="p-3">
-          <div className="flex items-start gap-x-2">
-            <div
-              className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-              style={{ background: `${color}14` }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1.5 L13 12 H1 Z" stroke={color} strokeWidth="1.4" strokeLinejoin="round" />
-                <path d="M7 6 V8.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
-                <circle cx="7" cy="10.3" r="0.7" fill={color} />
-              </svg>
-            </div>
-            <div className="flex-1 leading-tight">
-              <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-                Public S3 bucket exposed
-              </p>
-              <p className="mt-0.5 text-[10px]" style={{ color: T.inkSubtle }}>
-                prod-uploads · us-east-1
-              </p>
-            </div>
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-              style={{ background: `${color}1a`, color, letterSpacing: "0.04em" }}
-            >
-              HIGH
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-x-2">
-            <button
-              className="osto-btn-shimmer flex items-center gap-x-1 rounded-[6px] px-2 py-1 text-[10px] font-semibold"
-              style={{ background: color, color: "#fff" }}
-            >
-              <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-                <path d="m1.8 5 2 2L8 2.6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Auto-fix
-            </button>
-            <button
-              className="rounded-[6px] px-2 py-1 text-[10px] font-medium"
-              style={{ color: T.inkSoft, boxShadow: "inset 0 0 0 1px rgba(38,38,43,0.08)" }}
-            >
-              View
-            </button>
-            <span className="ml-auto text-[10px]" style={{ color: T.inkSubtle }}>
-              SOC2 · CC6.1
-            </span>
-          </div>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// WAF — Surface: live activity feed. Recent requests streaming, one
-// highlighted as blocked in real time.
-function IllusWAF({ color }: { color: string }) {
-  const rows: Array<{ ip: string; rule: string; blocked?: boolean }> = [
-    { ip: "104.28.•.42", rule: "GET /api/v1" },
-    { ip: "203.0.•.7", rule: "SQLi · /search", blocked: true },
-    { ip: "52.84.•.211", rule: "POST /auth" },
-    { ip: "93.184.•.16", rule: "GET /static" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* feed header */}
-        <div
-          className="flex items-center justify-between border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <div className="flex items-center gap-x-1.5">
-            <span
-              className="osto-live h-1.5 w-1.5 rounded-full"
-              style={{
-                background: "#19a974",
-                boxShadow: "0 0 0 3px rgba(25,169,116,0.18)",
-              }}
-            />
-            <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-              Live · firewall
-            </span>
-          </div>
-          <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-            now
-          </span>
-        </div>
-        {/* request rows */}
-        <ul>
-          {rows.map((r, i) => (
-            <li
-              key={i}
-              className={`flex items-center gap-x-2 border-b px-3 py-1.5 last:border-b-0 osto-appear ${r.blocked ? "osto-row-sheen" : ""}`}
-              style={{
-                borderColor: "rgba(38,38,43,0.04)",
-                background: r.blocked ? `${color}08` : "transparent",
-                animationDelay: `${300 + i * 90}ms`,
-              }}
-            >
-              <span
-                className="text-[10px] font-medium tabular-nums"
-                style={{ color: r.blocked ? color : T.inkSoft, width: "78px" }}
-              >
-                {r.ip}
-              </span>
-              <span
-                className="flex-1 text-[10px]"
-                style={{ color: r.blocked ? T.ink : T.inkSoft, fontWeight: r.blocked ? 600 : 400 }}
-              >
-                {r.rule}
-              </span>
-              {r.blocked ? (
-                <span
-                  className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                  style={{ background: color, color: "#fff", letterSpacing: "0.04em" }}
-                >
-                  BLOCKED
-                </span>
-              ) : (
-                <span
-                  className="text-[10px]"
-                  style={{ color: "#0d8050" }}
-                >
-                  ✓
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </FintaCard>
-    </div>
-  );
-}
-
-// API — Surface: endpoint inventory table. One endpoint flagged as
-// "shadow" — discovered but undocumented.
-function IllusAPI({ color }: { color: string }) {
-  const rows: Array<{ m: string; p: string; status?: "shadow" | "ok" }> = [
-    { m: "GET", p: "/v1/users", status: "ok" },
-    { m: "POST", p: "/v1/auth", status: "ok" },
-    { m: "POST", p: "/internal/billing", status: "shadow" },
-    { m: "GET", p: "/v1/orders", status: "ok" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* table header */}
-        <div
-          className="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            API inventory
-          </span>
-          <span />
-          <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-            14 active
-          </span>
-        </div>
-        {/* rows */}
-        <ul>
-          {rows.map((r, i) => {
-            const isShadow = r.status === "shadow";
-            return (
-              <li
-                key={i}
-                className={`flex items-center gap-x-2 border-b px-3 py-1.5 last:border-b-0 osto-appear ${isShadow ? "osto-row-sheen" : ""}`}
-                style={{
-                  borderColor: "rgba(38,38,43,0.04)",
-                  background: isShadow ? `${color}10` : "transparent",
-                  animationDelay: `${300 + i * 90}ms`,
-                }}
-              >
-                <span
-                  className="rounded text-[9px] font-bold tabular-nums"
-                  style={{
-                    background: isShadow ? color : T.panel,
-                    color: isShadow ? "#fff" : T.inkSoft,
-                    minWidth: "32px",
-                    textAlign: "center",
-                    padding: "2px 4px",
-                  }}
-                >
-                  {r.m}
-                </span>
-                <span
-                  className="flex-1 text-[10px]"
-                  style={{ color: isShadow ? T.ink : T.inkSoft, fontWeight: isShadow ? 600 : 400 }}
-                >
-                  {r.p}
-                </span>
-                {isShadow && (
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                    style={{ background: "#fff", color, boxShadow: `inset 0 0 0 1px ${color}40`, letterSpacing: "0.04em" }}
-                  >
-                    SHADOW
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </FintaCard>
-    </div>
-  );
-}
-
-// ── Application category ───────────────────────────────────────────
-
-// Web Scanner — Surface: scan-in-progress card. Shows the active URL being
-// crawled, a progress bar, and a live count of findings appearing as the
-// scan runs. Reads as "we caught this in real time."
-function IllusWebScan({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* header — current target */}
-        <div
-          className="flex items-center gap-x-2 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span
-            className="osto-live h-1.5 w-1.5 rounded-full"
-            style={{ background: color, boxShadow: `0 0 0 3px ${color}26` }}
-          />
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            Scanning
-          </span>
-          <span
-            className="text-[10px] tabular-nums"
-            style={{ color: T.inkSoft }}
-          >
-            app.osto.one
-          </span>
-          <span className="ml-auto text-[10px]" style={{ color: T.inkSubtle }}>
-            128 / 247
-          </span>
-        </div>
-        {/* progress bar */}
-        <div
-          className="h-1 w-full overflow-hidden"
-          style={{ background: T.panel }}
-        >
-          <div
-            className="osto-progress-loop h-full"
-            style={{ background: color }}
-          />
-        </div>
-        {/* findings list — surface area */}
-        <ul className="p-3 pt-2">
-          {[
-            { sev: "HIGH", url: "/api/auth · bypass", fresh: true },
-            { sev: "MED", url: "/admin · weak XSS filter" },
-            { sev: "LOW", url: "/static · cache header" },
-          ].map((f, i) => (
-            <li
-              key={i}
-              className="osto-appear mt-1.5 flex items-center gap-x-2 first:mt-0"
-              style={{ animationDelay: `${300 + i * 120}ms` }}
-            >
-              <span
-                className="rounded text-[9px] font-bold"
-                style={{
-                  background:
-                    f.sev === "HIGH" ? color : f.sev === "MED" ? `${color}66` : T.panel,
-                  color: f.sev === "LOW" ? T.inkSoft : "#fff",
-                  padding: "2px 5px",
-                  minWidth: "32px",
-                  textAlign: "center",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {f.sev}
-              </span>
-              <span
-                className="flex-1 text-[10px]"
-                style={{ color: f.fresh ? T.ink : T.inkSoft, fontWeight: f.fresh ? 600 : 400 }}
-              >
-                {f.url}
-              </span>
-              {f.fresh && (
-                <span className="text-[9px] font-medium" style={{ color }}>
-                  new
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Mobile App Scanner — Surface: build report card. Phone silhouette on the
-// left, three category checks on the right (static / network / crypto)
-// with a single failing category called out. Reads as a release-gate report.
-function IllusMobile({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-start gap-x-3">
-          {/* phone artwork */}
-          <div
-            className="osto-float flex h-[88px] w-[52px] shrink-0 items-center justify-center rounded-[10px] p-1"
-            style={{ background: T.panel, boxShadow: "inset 0 0 0 1px rgba(38,38,43,0.06)" }}
-          >
-            <div
-              className="flex h-full w-full flex-col items-center justify-between rounded-[7px] py-2"
-              style={{ background: "#fff", boxShadow: "inset 0 0 0 1px rgba(38,38,43,0.04)" }}
-            >
-              <div
-                className="h-1 w-3 rounded-full"
-                style={{ background: T.inkFaint, opacity: 0.5 }}
-              />
-              <div
-                className="flex h-7 w-7 items-center justify-center rounded-[6px]"
-                style={{ background: color }}
-              >
-                <span className="text-[10px] font-bold text-white">o</span>
-              </div>
-              <div className="space-y-0.5">
-                <div className="h-0.5 w-5 rounded-full" style={{ background: T.inkFaint }} />
-                <div className="h-0.5 w-3 rounded-full" style={{ background: T.inkFaint }} />
-              </div>
-            </div>
-          </div>
-          {/* report */}
-          <div className="flex-1 leading-tight">
-            <div className="flex items-baseline justify-between">
-              <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-                osto-mobile
-              </p>
-              <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-                v2.4.1
-              </span>
-            </div>
-            <p className="mt-0.5 text-[10px]" style={{ color: T.inkSubtle }}>
-              iOS · Android build
-            </p>
-            <ul className="mt-2 space-y-1">
-              {[
-                { l: "Static", v: "passed", ok: true },
-                { l: "Network", v: "passed", ok: true },
-                { l: "Crypto", v: "1 issue", ok: false },
-              ].map((c, i) => (
-                <li
-                  key={c.l}
-                  className="osto-appear flex items-center gap-x-1.5"
-                  style={{ animationDelay: `${300 + i * 120}ms` }}
-                >
-                  <span
-                    className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: c.ok ? "rgba(25,169,116,0.16)" : `${color}1a` }}
-                  >
-                    <span
-                      className="h-1 w-1 rounded-full"
-                      style={{ background: c.ok ? "#19a974" : color }}
-                    />
-                  </span>
-                  <span className="text-[10px] font-medium" style={{ color: T.ink }}>
-                    {c.l}
-                  </span>
-                  <span
-                    className="ml-auto text-[10px]"
-                    style={{ color: c.ok ? "#0d8050" : color, fontWeight: c.ok ? 500 : 600 }}
-                  >
-                    {c.v}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// SAST/SBOM — Surface: code-review fragment. File path + line numbers,
-// one vulnerable line highlighted brand-color with an inline finding pill.
-// Looks like the IDE/PR review surface.
-function IllusSAST({ color }: { color: string }) {
-  const lines: Array<{ n: number; text: string; hi?: boolean }> = [
-    { n: 41, text: "function login(req) {" },
-    { n: 42, text: "  const u = req.body.user", hi: true },
-    { n: 43, text: "  return query(`SELECT *…${u}`)" },
-    { n: 44, text: "}" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* file header */}
-        <div
-          className="flex items-center gap-x-2 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path d="M2.5 1.5 L7 1.5 L9.5 4 V10.5 L2.5 10.5 Z" stroke={T.inkSoft} strokeWidth="1" strokeLinejoin="round" />
-            <path d="M7 1.5 V4 H9.5" stroke={T.inkSoft} strokeWidth="1" strokeLinejoin="round" />
-          </svg>
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            auth.ts
-          </span>
-          <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-            #412
-          </span>
-          <span
-            className="ml-auto rounded px-1.5 py-0.5 text-[9px] font-bold"
-            style={{ background: `${color}1a`, color, letterSpacing: "0.04em" }}
-          >
-            SQLi
-          </span>
-        </div>
-        {/* code body */}
-        <div className="px-3 py-2">
-          {lines.map((l, i) => (
-            <div
-              key={l.n}
-              className={`flex items-center gap-x-2 rounded px-1.5 py-[2px] osto-appear ${l.hi ? "osto-line-breath" : ""}`}
-              style={{
-                background: l.hi ? `${color}10` : "transparent",
-                boxShadow: l.hi ? `inset 2px 0 0 0 ${color}` : "none",
-                animationDelay: `${250 + i * 90}ms`,
-              }}
-            >
-              <span
-                className="text-[9px] tabular-nums"
-                style={{ color: T.inkFaint, width: "14px", textAlign: "right" }}
-              >
-                {l.n}
-              </span>
-              <span
-                className="text-[10px]"
-                style={{
-                  color: l.hi ? color : T.ink,
-                  fontWeight: l.hi ? 600 : 400,
-                  fontFamily: "var(--font-sans)",
-                }}
-              >
-                {l.text}
-              </span>
-            </div>
-          ))}
-        </div>
-        {/* footer — finding caption */}
-        <div
-          className="flex items-center gap-x-1.5 border-t px-3 py-1.5"
-          style={{ borderColor: "rgba(38,38,43,0.06)", background: T.panel }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-          <span className="text-[10px] font-medium" style={{ color: T.inkSoft }}>
-            Unsanitized input · L42
-          </span>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// ── Endpoint category ──────────────────────────────────────────────
-
-// Antimalware — Surface: notification toast. Looks like the Osto agent
-// just blocked something. Big shield icon, threat detail, quarantine pill.
-function IllusAntimalware({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-start gap-x-2.5">
-          <div
-            className="osto-icon-pulse flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{ background: `${color}14` }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path
-                d="M9 1.5 L15 3.8 V9 C15 12.2 12.6 14.6 9 16 C5.4 14.6 3 12.2 3 9 V3.8 Z"
-                fill={color}
-              />
-              <path d="M6 9 L8 11 L12 6.6" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div className="flex-1 leading-tight">
-            <div className="flex items-center gap-x-1.5">
-              <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-                Threat blocked
-              </p>
-              <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-                · 14:22
-              </span>
-            </div>
-            <p className="mt-0.5 text-[10px]" style={{ color: T.inkSubtle }}>
-              Macintosh-Pro · Yash
-            </p>
-          </div>
-          <span
-            className="osto-stamp rounded-full px-2 py-0.5 text-[9px] font-bold"
-            style={{ background: `${color}1a`, color, letterSpacing: "0.04em", animationDelay: "400ms" }}
-          >
-            QUARANTINED
-          </span>
-        </div>
-        {/* threat detail */}
-        <div
-          className="mt-3 rounded-[6px] px-2 py-1.5"
-          style={{ background: T.panel }}
-        >
-          <p className="text-[10px] font-medium" style={{ color: T.ink }}>
-            Trojan.MacOS.Generic.A
-          </p>
-          <p className="text-[10px]" style={{ color: T.inkSubtle }}>
-            ~/Downloads/installer.dmg
-          </p>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Disk Encryption — Surface: drive panel. Drive artwork on the left, status
-// + AES-256 confirmation + protected progress on the right.
-function IllusDiskEnc({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-center gap-x-3">
-          {/* drive object */}
-          <div
-            className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px]"
-            style={{ background: `${color}10` }}
-          >
-            <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-              <rect x="3" y="6" width="20" height="14" rx="2.5" stroke={color} strokeWidth="1.6" />
-              <line x1="6" y1="10" x2="14" y2="10" stroke={color} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
-              <line x1="6" y1="13" x2="11" y2="13" stroke={color} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
-              <line x1="6" y1="16" x2="14" y2="16" stroke={color} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
-              <circle cx="19" cy="13" r="1.6" fill={color} />
-            </svg>
-            {/* lock badge */}
-            <div
-              className="osto-icon-pulse absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full"
-              style={{ background: color, boxShadow: `0 2px 6px ${color}55` }}
-            >
-              <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-                <rect x="2" y="4.5" width="6" height="4" rx="0.8" fill="#fff" />
-                <path d="M3.5 4.5 V3.2 a1.5 1.5 0 0 1 3 0 V4.5" stroke="#fff" strokeWidth="1.1" fill="none" />
-              </svg>
-            </div>
-          </div>
-          {/* status */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-                Macintosh HD
-              </p>
-              <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-                512 GB
-              </span>
-            </div>
-            <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full" style={{ background: T.panel }}>
-              <div
-                className="osto-fill-once h-full rounded-full"
-                style={{ background: color, width: "100%", animationDelay: "200ms" }}
-              />
-            </div>
-            <p className="mt-1.5 text-[10px] font-semibold" style={{ color }}>
-              AES-256 · Encrypted
-            </p>
-          </div>
-        </div>
-        {/* fleet roll-up */}
-        <div className="mt-3 flex items-center gap-x-2 border-t pt-2" style={{ borderColor: "rgba(38,38,43,0.06)" }}>
-          <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-            Fleet
-          </span>
-          <span className="text-[10px] font-semibold tabular-nums" style={{ color: T.ink }}>
-            47 / 47
-          </span>
-          <span className="ml-auto text-[10px] font-medium" style={{ color: "#0d8050" }}>
-            ✓ all encrypted
-          </span>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// App Control — Surface: app allowlist. Three managed apps with branded
-// icon tiles, each with an allow/review status.
-function IllusAppControl({ color }: { color: string }) {
-  const apps: Array<{ n: string; bg: string; ch: string; status: "ok" | "review" }> = [
-    { n: "Slack", bg: "linear-gradient(135deg,#36C5F0,#E01E5A,#ECB22E)", ch: "S", status: "ok" },
-    { n: "Cursor", bg: "linear-gradient(135deg,#1f1f1f,#404040)", ch: "C", status: "ok" },
-    { n: "iTerm 2.app", bg: "#fff", ch: "I", status: "review" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        <div
-          className="flex items-center justify-between border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            Allowed apps
-          </span>
-          <span className="text-[10px] tabular-nums" style={{ color: T.inkSubtle }}>
-            42 / 47
-          </span>
-        </div>
-        <ul>
-          {apps.map((a, i) => (
-            <li
-              key={i}
-              className="osto-appear flex items-center gap-x-2 border-b px-3 py-1.5 last:border-b-0"
-              style={{ borderColor: "rgba(38,38,43,0.04)", animationDelay: `${250 + i * 110}ms` }}
-            >
-              <span
-                className="flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold"
-                style={{
-                  background: a.bg,
-                  color: a.status === "review" ? T.inkSoft : "#fff",
-                  boxShadow: a.status === "review" ? "inset 0 0 0 1px rgba(38,38,43,0.12)" : "none",
-                }}
-              >
-                {a.ch}
-              </span>
-              <span className="flex-1 text-[10px] font-medium" style={{ color: T.ink }}>
-                {a.n}
-              </span>
-              {a.status === "ok" ? (
-                <span
-                  className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                  style={{ background: "rgba(25,169,116,0.14)", color: "#0d8050", letterSpacing: "0.04em" }}
-                >
-                  TRUSTED
-                </span>
-              ) : (
-                <span
-                  className="osto-chip-glow rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                  style={{ background: `${color}1a`, color, letterSpacing: "0.04em" }}
-                >
-                  REVIEW
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Device Control — Surface: device-event card. USB peripheral artwork +
-// "Denied" status + the policy that triggered it.
-function IllusDeviceControl({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-start gap-x-2.5">
-          {/* USB plug artwork */}
-          <div
-            className="osto-icon-pulse flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px]"
-            style={{ background: `${color}14` }}
-          >
-            <svg width="18" height="20" viewBox="0 0 18 22" fill="none">
-              <path d="M9 2 V19" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
-              <circle cx="9" cy="5" r="2.2" fill={color} />
-              <rect x="6" y="13" width="6" height="6" rx="1" stroke={color} strokeWidth="1.6" />
-              <line x1="7.5" y1="9" x2="7.5" y2="10.4" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
-              <line x1="10.5" y1="9" x2="10.5" y2="10.4" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </div>
-          <div className="flex-1 leading-tight">
-            <div className="flex items-center gap-x-1.5">
-              <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-                USB device denied
-              </p>
-            </div>
-            <p className="mt-0.5 text-[10px]" style={{ color: T.inkSubtle }}>
-              SanDisk Cruzer · 32 GB
-            </p>
-          </div>
-          <span
-            className="osto-stamp rounded-full px-2 py-0.5 text-[9px] font-bold"
-            style={{ background: color, color: "#fff", letterSpacing: "0.04em", animationDelay: "350ms" }}
-          >
-            BLOCKED
-          </span>
-        </div>
-        {/* policy reference */}
-        <div
-          className="mt-3 flex items-center gap-x-1.5 rounded-[6px] px-2 py-1.5"
-          style={{ background: T.panel }}
-        >
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path d="M3 1.5 H8 L10 3.5 V10 L3 10 Z" stroke={T.inkSoft} strokeWidth="1" strokeLinejoin="round" />
-            <path d="M5 5.5 H8 M5 7 H7" stroke={T.inkSoft} strokeWidth="1" strokeLinecap="round" />
-          </svg>
-          <span className="text-[10px]" style={{ color: T.inkSoft }}>
-            Policy:
-          </span>
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            block-removable-media
-          </span>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// DLP — Surface: spreadsheet preview. CSV file fragment with two columns
-// visibly masked with a dotted pattern.
-function IllusDLP({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        <div
-          className="flex items-center gap-x-2 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path d="M2.5 1.5 L7 1.5 L9.5 4 V10.5 L2.5 10.5 Z" stroke={T.inkSoft} strokeWidth="1" strokeLinejoin="round" />
-            <path d="M7 1.5 V4 H9.5" stroke={T.inkSoft} strokeWidth="1" strokeLinejoin="round" />
-          </svg>
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            customers.csv
-          </span>
-          <span className="ml-auto text-[10px]" style={{ color: T.inkSubtle }}>
-            12,481 rows
-          </span>
-        </div>
-        {/* table header */}
-        <div
-          className="grid grid-cols-3 gap-x-2 border-b px-3 py-1.5 text-[9px] font-medium"
-          style={{ borderColor: "rgba(38,38,43,0.04)", color: T.inkSubtle, letterSpacing: "0.04em" }}
-        >
-          <span>NAME</span>
-          <span>EMAIL</span>
-          <span>PHONE</span>
-        </div>
-        {/* rows with masked columns */}
-        {[
-          { n: "Yash R." },
-          { n: "Anita K." },
-          { n: "Rohan P." },
-        ].map((r, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-3 gap-x-2 border-b px-3 py-1.5 text-[10px] last:border-b-0"
-            style={{ borderColor: "rgba(38,38,43,0.04)" }}
-          >
-            <span style={{ color: T.ink }}>{r.n}</span>
-            <span
-              className="osto-mask-shift h-2.5 self-center rounded"
-              style={{
-                background: `repeating-linear-gradient(90deg, ${color} 0 3px, ${color}66 3px 6px)`,
-              }}
-            />
-            <span
-              className="osto-mask-shift h-2.5 self-center rounded"
-              style={{
-                background: `repeating-linear-gradient(90deg, ${color} 0 3px, ${color}66 3px 6px)`,
-                width: "70%",
-              }}
-            />
-          </div>
-        ))}
-        <div
-          className="flex items-center gap-x-1.5 border-t px-3 py-1.5"
-          style={{ borderColor: "rgba(38,38,43,0.06)", background: T.panel }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-          <span className="text-[10px] font-medium" style={{ color: T.inkSoft }}>
-            2 columns auto-masked · email, phone
-          </span>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Screen Lock — Surface: lock screen mockup. Mac-style lock screen with a
-// big clock and a small lock-icon affordance.
-function IllusScreenLock({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <div
-        className="osto-float relative flex h-[160px] w-[240px] flex-col items-center justify-center overflow-hidden rounded-[10px]"
+    <div
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 top-1/2 hidden md:block"
+      style={{
+        width: size * 2,
+        height: size * 2,
+        transform: "translate(-50%, -50%)",
+      }}
+    >
+      {/* Top-left tile's bottom-right corner — triangle pointing UP+LEFT */}
+      <span
+        className="absolute"
         style={{
-          background: `linear-gradient(135deg, ${color}, #0d1539)`,
-          boxShadow: `0 0 0 1px rgba(38,38,43,0.08), 0 12px 24px -8px ${color}40`,
+          left: 0,
+          top: 0,
+          width: 0,
+          height: 0,
+          borderTop: `${size}px solid ${PALETTE.page}`,
+          borderRight: `${size}px solid transparent`,
+          // Hairline edge so the notch reads as a cut, not a paste
+          filter: `drop-shadow(-0.5px 0.5px 0 ${T.hairline})`,
         }}
+      />
+      {/* Top-right tile's bottom-left corner — triangle pointing UP+RIGHT */}
+      <span
+        className="absolute"
+        style={{
+          right: 0,
+          top: 0,
+          width: 0,
+          height: 0,
+          borderTop: `${size}px solid ${PALETTE.page}`,
+          borderLeft: `${size}px solid transparent`,
+          filter: `drop-shadow(0.5px 0.5px 0 ${T.hairline})`,
+        }}
+      />
+      {/* Bottom-left tile's top-right corner — triangle pointing DOWN+LEFT */}
+      <span
+        className="absolute"
+        style={{
+          left: 0,
+          bottom: 0,
+          width: 0,
+          height: 0,
+          borderBottom: `${size}px solid ${PALETTE.page}`,
+          borderRight: `${size}px solid transparent`,
+          filter: `drop-shadow(-0.5px -0.5px 0 ${T.hairline})`,
+        }}
+      />
+      {/* Bottom-right tile's top-left corner — triangle pointing DOWN+RIGHT */}
+      <span
+        className="absolute"
+        style={{
+          right: 0,
+          bottom: 0,
+          width: 0,
+          height: 0,
+          borderBottom: `${size}px solid ${PALETTE.page}`,
+          borderLeft: `${size}px solid transparent`,
+          filter: `drop-shadow(0.5px -0.5px 0 ${T.hairline})`,
+        }}
+      />
+      {/* Center accent square — focal point at the cross, glowing */}
+      <span
+        className="absolute left-1/2 top-1/2"
+        style={{
+          width: 4,
+          height: 4,
+          background: BRAND,
+          transform: "translate(-50%, -50%)",
+          boxShadow: `0 0 0 1.5px ${PALETTE.page}, 0 0 12px ${BRAND}55`,
+        }}
+      />
+    </div>
+  );
+}
+
+// ═══ ILLUSTRATIONS ════════════════════════════════════════════════════
+// Each illustration is an audio-tool surface, monochromatic with brand-
+// color accents. No globes, no dials, no generic charts.
+
+// ─── Illustration 1 — Streaming console ───────────────────────────────
+// A stylized SDK invocation in a console-style card. Shows the actual
+// shape of the developer's experience: a single function call,
+// "speaking..." status indicator with a live audio cursor, and a one-line
+// waveform that reads as the stream emerging in real time. Reads as
+// "what your code does when you call the API," not abstract audio art.
+function IllusWaveform({ accent }: { accent: string }) {
+  const W = 600;
+  const H = 220;
+  // Card metrics
+  const cardX = 24;
+  const cardY = 18;
+  const cardW = W - cardX * 2;
+  const cardH = H - cardY * 2 - 8;
+  // Inner content padding
+  const padX = 22;
+  const padY = 18;
+  // Color shorthands
+  const ink = T.ink;
+  const sub = T.inkMid;
+  const faint = "rgba(10,10,16,0.06)";
+  return (
+    <div className="absolute inset-0 flex items-center justify-center px-4">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block" }}
       >
-        {/* soft "wallpaper" highlights */}
-        <div
-          className="absolute -top-12 -left-8 h-32 w-32 rounded-full"
-          style={{ background: "rgba(255,255,255,0.08)", filter: "blur(8px)" }}
+        {/* Card surface */}
+        <rect
+          x={cardX} y={cardY} width={cardW} height={cardH}
+          fill="#ffffff"
+          stroke={T.ring}
+          strokeWidth={1}
         />
-        <div
-          className="absolute -bottom-10 -right-6 h-24 w-24 rounded-full"
-          style={{ background: "rgba(255,255,255,0.06)", filter: "blur(10px)" }}
+        {/* Window chrome: a thin top bar with three dot-buttons */}
+        <rect
+          x={cardX} y={cardY} width={cardW} height={22}
+          fill={T.panel}
         />
-        {/* clock */}
-        <div className="relative flex flex-col items-center text-white">
-          <span
-            className="tabular-nums"
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "42px",
-              fontWeight: 500,
-              lineHeight: "1",
-              letterSpacing: "-1.4px",
-            }}
-          >
-            11:50
-          </span>
-          <span
-            className="mt-1 text-[10px] font-medium"
-            style={{ color: "rgba(255,255,255,0.78)", letterSpacing: "0.02em" }}
-          >
-            Friday, May 9
-          </span>
-        </div>
-        {/* lock badge bottom */}
-        <div className="relative mt-4 flex items-center gap-x-1.5 rounded-full bg-white/15 px-2 py-1 backdrop-blur">
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-            <rect x="2.5" y="5.5" width="7" height="5" rx="1" fill="#fff" />
-            <path d="M4 5.5 V3.8 a2 2 0 0 1 4 0 V5.5" stroke="#fff" strokeWidth="1.2" fill="none" />
-          </svg>
-          <span className="text-[10px] font-medium text-white">
-            Locked · idle 1:00
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Swipe Clean — Surface: remote-wipe progress card. Phone artwork being
-// erased + step list showing what's been wiped.
-function IllusSwipe({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-start gap-x-3">
-          {/* phone with progress fill */}
-          <div className="relative flex h-[88px] w-[44px] shrink-0 items-center justify-center">
-            <div
-              className="absolute inset-0 rounded-[10px] p-[3px]"
-              style={{ background: T.panel, boxShadow: "inset 0 0 0 1px rgba(38,38,43,0.06)" }}
-            >
-              <div
-                className="relative h-full w-full overflow-hidden rounded-[7px]"
-                style={{ background: "#fff", boxShadow: "inset 0 0 0 1px rgba(38,38,43,0.04)" }}
-              >
-                {/* fill — bottom-up wipe */}
-                <div
-                  className="osto-fill-up absolute bottom-0 left-0 right-0"
-                  style={{ background: `${color}1a` }}
-                />
-                <div
-                  className="absolute left-0 right-0"
-                  style={{ bottom: "62%", height: "1px", background: color, opacity: 0.6 }}
-                />
-              </div>
-            </div>
-          </div>
-          {/* steps */}
-          <div className="flex-1 leading-tight">
-            <div className="flex items-baseline justify-between">
-              <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-                Wiping device
-              </p>
-              <span
-                className="text-[10px] font-semibold tabular-nums"
-                style={{ color }}
-              >
-                62%
-              </span>
-            </div>
-            <p className="mt-0.5 text-[10px]" style={{ color: T.inkSubtle }}>
-              MacBook Pro · Yash
-            </p>
-            <ul className="mt-2 space-y-1">
-              {[
-                { t: "Browser data", on: true },
-                { t: "Saved tokens", on: true },
-                { t: "User profile", on: false },
-              ].map((s, i) => (
-                <li
-                  key={i}
-                  className="osto-appear flex items-center gap-x-1.5"
-                  style={{ animationDelay: `${300 + i * 130}ms` }}
-                >
-                  <span
-                    className="flex h-3 w-3 shrink-0 items-center justify-center rounded-full"
-                    style={{
-                      background: s.on ? color : "#fff",
-                      boxShadow: s.on ? "none" : `inset 0 0 0 1px ${T.inkFaint}`,
-                    }}
-                  >
-                    {s.on && (
-                      <svg width="6" height="6" viewBox="0 0 8 8" fill="none">
-                        <path d="m1.5 4 1.7 1.7L6.5 2.5" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </span>
-                  <span
-                    className="text-[10px]"
-                    style={{ color: s.on ? T.ink : T.inkSubtle, fontWeight: s.on ? 500 : 400 }}
-                  >
-                    {s.t}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// ── Network category ───────────────────────────────────────────────
-
-// ZTNA — Surface: access decision modal. User identity + 2FA + grant
-// scope, with an ALLOW stamp. The "decision being made" surface.
-function IllusZTNA({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* decision header */}
-        <div
-          className="flex items-center gap-x-2 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span
-            className="osto-stamp rounded-full px-2 py-0.5 text-[9px] font-bold"
-            style={{ background: "rgba(25,169,116,0.16)", color: "#0d8050", letterSpacing: "0.04em", animationDelay: "350ms" }}
-          >
-            ALLOW
-          </span>
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            prod-db.osto.internal
-          </span>
-        </div>
-        {/* policy rows */}
-        <div className="px-3 py-2">
-          <div className="flex items-center gap-x-2 py-0.5">
-            <div
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-              style={{ background: color }}
-            >
-              N
-            </div>
-            <div className="flex-1 leading-tight">
-              <p className="text-[10px] font-semibold" style={{ color: T.ink }}>
-                Nitin Yadav
-              </p>
-              <p className="text-[10px]" style={{ color: T.inkSubtle }}>
-                engineer · IST
-              </p>
-            </div>
-            <span
-              className="osto-chip-glow rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-              style={{ background: "rgba(25,169,116,0.14)", color: "#0d8050", letterSpacing: "0.04em" }}
-            >
-              2FA ✓
-            </span>
-          </div>
-          {/* time window */}
-          <div
-            className="mt-2 flex items-center gap-x-2 rounded-[6px] px-2 py-1.5"
-            style={{ background: T.panel }}
-          >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-              <circle cx="6" cy="6" r="4.2" stroke={T.inkSoft} strokeWidth="1" fill="none" />
-              <path d="M6 4 V6 L7.5 7" stroke={T.inkSoft} strokeWidth="1" strokeLinecap="round" />
-            </svg>
-            <span className="text-[10px]" style={{ color: T.inkSoft }}>
-              Window
-            </span>
-            <span className="ml-auto text-[10px] font-medium" style={{ color: T.ink }}>
-              14:00 – 18:00 IST
-            </span>
-          </div>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Domain — Surface: blocked-page screenshot. A fake browser chrome with
-// the address bar showing a phishing domain and a captive page beneath.
-function IllusDomain({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* browser chrome */}
-        <div
-          className="flex items-center gap-x-1.5 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span className="h-2 w-2 rounded-full" style={{ background: "#ff5f57" }} />
-          <span className="h-2 w-2 rounded-full" style={{ background: "#febc2e" }} />
-          <span className="h-2 w-2 rounded-full" style={{ background: "#28c840" }} />
-          <div
-            className="ml-2 flex flex-1 items-center gap-x-1 rounded px-2 py-0.5"
-            style={{ background: T.panel }}
-          >
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-              <rect x="2" y="4.5" width="6" height="4" rx="0.6" fill={color} />
-              <path d="M3.4 4.5 V3.2 a1.6 1.6 0 0 1 3.2 0 V4.5" stroke={color} strokeWidth="1" fill="none" />
-            </svg>
-            <span className="osto-block-blink text-[10px] font-medium" style={{ color }}>
-              phishy-vault.xyz
-            </span>
-            <span className="ml-auto text-[10px]" style={{ color: T.inkSubtle }}>
-              ⌘
-            </span>
-          </div>
-        </div>
-        {/* captive block page */}
-        <div className="flex flex-col items-center px-4 py-4">
-          <div
-            className="osto-icon-pulse mb-2 flex h-9 w-9 items-center justify-center rounded-full"
-            style={{ background: `${color}14` }}
-          >
-            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-              <path d="M9 1.5 L15 4 V9 C15 12.5 12.5 14.7 9 16 C5.5 14.7 3 12.5 3 9 V4 Z" fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-              <path d="m6.5 6.5 5 5 m0-5-5 5" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </div>
-          <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-            Site blocked by Osto
-          </p>
-          <p className="mt-1 text-[10px]" style={{ color: T.inkSubtle }}>
-            Phishing · matched on threat-intel feed
-          </p>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// ── Compliance category ────────────────────────────────────────────
-
-// AI Q&A — Surface: questionnaire row + AI-drafted answer. Looks like the
-// surface where AI is filling in a security questionnaire response.
-function IllusAIQA({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        {/* question header */}
-        <div
-          className="flex items-center justify-between border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span className="text-[10px] font-semibold" style={{ color: T.inkSubtle }}>
-            Q12 · Encryption
-          </span>
-          <span
-            className="flex items-center gap-x-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-            style={{ background: `${color}1a`, color, letterSpacing: "0.04em" }}
-          >
-            <svg className="osto-sparkle" width="8" height="8" viewBox="0 0 10 10" fill="none">
-              <path d="M5 1 L6 4 L9 5 L6 6 L5 9 L4 6 L1 5 L4 4 Z" fill={color} />
-            </svg>
-            AI DRAFTED
-          </span>
-        </div>
-        {/* question text */}
-        <p className="px-3 pt-2 text-[11px] font-semibold" style={{ color: T.ink }}>
-          Do you encrypt endpoints at rest?
-        </p>
-        {/* answer */}
-        <div className="osto-appear px-3 py-2" style={{ animationDelay: "350ms" }}>
-          <p
-            className="text-[10px]"
-            style={{ color: T.inkSoft, lineHeight: 1.5 }}
-          >
-            Yes. <span style={{ color: T.ink, fontWeight: 600 }}>AES-256</span> enforced across
-            managed macOS and Windows devices. Live evidence from Disk
-            Encryption module.<span className="osto-caret" style={{ marginLeft: "2px", color: T.ink }}>▍</span>
-          </p>
-        </div>
-        {/* citation footer */}
-        <div
-          className="flex items-center gap-x-1.5 border-t px-3 py-1.5"
-          style={{ borderColor: "rgba(38,38,43,0.06)", background: T.panel }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-          <span className="text-[10px]" style={{ color: T.inkSoft }}>
-            Cited:
-          </span>
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            Disk Encryption · 47 / 47
-          </span>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Compliance Automation — Surface: framework readiness chart. Bar chart
-// (color reserved for data) showing SOC 2 / ISO / HIPAA progress.
-function IllusCompliance({ color }: { color: string }) {
-  const frameworks = [
-    { f: "SOC 2", w: 92, c: "92 / 100" },
-    { f: "ISO 27001", w: 77, c: "88 / 114" },
-    { f: "HIPAA", w: 83, c: "54 / 65" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-baseline justify-between">
-          <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-            Framework readiness
-          </p>
-          <span className="text-[10px]" style={{ color: T.inkSubtle }}>
-            live
-          </span>
-        </div>
-        <ul className="mt-2.5 space-y-2">
-          {frameworks.map((f, i) => (
-            <li key={f.f}>
-              <div className="flex items-baseline justify-between">
-                <span className="text-[10px] font-medium" style={{ color: T.ink }}>
-                  {f.f}
-                </span>
-                <span
-                  className="text-[10px] font-semibold tabular-nums"
-                  style={{ color: T.inkSoft }}
-                >
-                  {f.c}
-                </span>
-              </div>
-              <div
-                className="mt-1 h-1.5 w-full overflow-hidden rounded-full"
-                style={{ background: T.panel }}
-              >
-                <div
-                  className="osto-bar-fill h-full rounded-full"
-                  style={{ width: `${f.w}%`, background: color, animationDelay: `${250 + i * 140}ms` }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-2.5 flex items-center gap-x-1.5 border-t pt-2" style={{ borderColor: "rgba(38,38,43,0.06)" }}>
-          <span className="osto-live h-1.5 w-1.5 rounded-full" style={{ background: "#19a974" }} />
-          <span className="text-[10px] font-medium" style={{ color: T.inkSoft }}>
-            Evidence syncing · 5 min ago
-          </span>
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Training — Surface: phishing quiz card. Question + radio options with
-// one selected (correct), score chip top-right.
-function IllusTraining({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold" style={{ color: T.inkSubtle }}>
-            Phishing · Q3 / 8
-          </span>
-          <span
-            className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-            style={{ background: "rgba(25,169,116,0.14)", color: "#0d8050", letterSpacing: "0.04em" }}
-          >
-            87% PASS
-          </span>
-        </div>
-        <p className="mt-2 text-[11px] font-semibold" style={{ color: T.ink }}>
-          You receive a link from “IT-support”. What now?
-        </p>
-        <div className="mt-2 space-y-1">
-          {[
-            { t: "Hover and inspect URL first", on: true },
-            { t: "Reply with credentials" },
-            { t: "Forward to leadership" },
-          ].map((opt, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-x-2 rounded-[6px] px-2 py-1.5 osto-appear ${opt.on ? "osto-chip-glow" : ""}`}
-              style={{
-                background: opt.on ? `${color}10` : T.panel,
-                boxShadow: opt.on ? `inset 0 0 0 1px ${color}33` : "none",
-                animationDelay: `${250 + i * 110}ms`,
-              }}
-            >
-              <span
-                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full"
-                style={{
-                  background: opt.on ? color : "#fff",
-                  boxShadow: opt.on ? "none" : `inset 0 0 0 1px ${T.inkFaint}`,
-                }}
-              >
-                {opt.on && (
-                  <svg width="7" height="7" viewBox="0 0 8 8" fill="none">
-                    <path d="m1.5 4 1.7 1.7L6.5 2.5" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </span>
-              <span
-                className="text-[10px]"
-                style={{ color: T.ink, fontWeight: opt.on ? 600 : 400 }}
-              >
-                {opt.t}
-              </span>
-            </div>
-          ))}
-        </div>
-      </FintaCard>
-    </div>
-  );
-}
-
-// Logs — Surface: live log tail. Header dot pulses, four log rows with
-// one WARN highlighted brand-color.
-function IllusLogs({ color }: { color: string }) {
-  const rows: Array<{ sev: string; msg: string; warn?: boolean }> = [
-    { sev: "INFO", msg: "user.login · nitin@osto.one" },
-    { sev: "INFO", msg: "evidence.synced · soc2-cc6.1" },
-    { sev: "WARN", msg: "policy.drift · cspm-04 · S3", warn: true },
-    { sev: "INFO", msg: "scan.complete · web-01" },
-  ];
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden">
-        <div
-          className="flex items-center gap-x-2 border-b px-3 py-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
-        >
-          <span
-            className="osto-live h-1.5 w-1.5 rounded-full"
-            style={{ background: "#19a974", boxShadow: "0 0 0 3px rgba(25,169,116,0.18)" }}
+        <line
+          x1={cardX} y1={cardY + 22} x2={cardX + cardW} y2={cardY + 22}
+          stroke={T.ring}
+        />
+        {[0, 1, 2].map((i) => (
+          <circle
+            key={i}
+            cx={cardX + 14 + i * 12}
+            cy={cardY + 11}
+            r={3}
+            fill={T.inkFaint}
           />
-          <span className="text-[10px] font-semibold" style={{ color: T.ink }}>
-            Live tail · audit.log
-          </span>
-          <span className="ml-auto text-[10px]" style={{ color: T.inkSubtle }}>
-            127 today
-          </span>
-        </div>
-        <ul className="px-3 py-2">
-          {rows.map((l, i) => (
-            <li
-              key={i}
-              className={`flex items-baseline gap-x-2 rounded px-1 py-[2px] osto-appear ${l.warn ? "osto-row-sheen" : ""}`}
-              style={{
-                background: l.warn ? `${color}10` : "transparent",
-                boxShadow: l.warn ? `inset 2px 0 0 0 ${color}` : "none",
-                animationDelay: `${250 + i * 90}ms`,
-              }}
-            >
-              <span
-                className="text-[9px] font-bold tabular-nums"
-                style={{
-                  color: l.warn ? color : T.inkFaint,
-                  width: "32px",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                {l.sev}
-              </span>
-              <span
-                className="text-[10px]"
-                style={{ color: l.warn ? T.ink : T.inkSoft, fontWeight: l.warn ? 600 : 400 }}
-              >
-                {l.msg}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </FintaCard>
-    </div>
-  );
-}
-
-// VAPT — Surface: engagement report. Header with engagement detail, scope
-// chips, and finding stats grid.
-function IllusVAPT({ color }: { color: string }) {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center px-4">
-      <FintaCard className="w-full max-w-[280px] overflow-hidden p-3">
-        <div className="flex items-center justify-between">
-          <div className="leading-tight">
-            <p className="text-[10px] font-semibold" style={{ color: T.inkSubtle }}>
-              Engagement
-            </p>
-            <p className="text-[11px] font-semibold" style={{ color: T.ink }}>
-              OSCP-led · 7-day delivery
-            </p>
-          </div>
-          <span
-            className="osto-chip-glow rounded-full px-2 py-0.5 text-[9px] font-bold"
-            style={{ background: "rgba(25,169,116,0.14)", color: "#0d8050", letterSpacing: "0.04em" }}
-          >
-            ON TRACK
-          </span>
-        </div>
-        {/* scope chips */}
-        <div className="mt-2 flex items-center gap-x-1.5">
-          {[
-            { l: "Web", on: true },
-            { l: "API", on: true },
-            { l: "Mobile", on: false },
-          ].map((s) => (
-            <span
-              key={s.l}
-              className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-              style={{
-                background: s.on ? color : "#fff",
-                color: s.on ? "#fff" : T.inkSoft,
-                boxShadow: s.on ? "none" : `inset 0 0 0 1px ${T.inkFaint}`,
-              }}
-            >
-              {s.l}
-            </span>
-          ))}
-        </div>
-        {/* finding stats */}
-        <div
-          className="mt-3 grid grid-cols-3 gap-x-2 border-t pt-2"
-          style={{ borderColor: "rgba(38,38,43,0.06)" }}
+        ))}
+        {/* Tab label — "agent.ts" */}
+        <text
+          x={cardX + 64} y={cardY + 15}
+          fontFamily="var(--font-mono)"
+          fontSize="10"
+          fill={sub}
+          letterSpacing="0.02em"
         >
-          {[
-            { l: "Critical", v: "0", g: true },
-            { l: "High", v: "2", c: true },
-            { l: "Medium", v: "5" },
-          ].map((s, i) => (
-            <div key={s.l} className="leading-tight">
-              <p
-                className="text-[9px] font-semibold"
-                style={{ color: T.inkSubtle, letterSpacing: "0.04em" }}
-              >
-                {s.l.toUpperCase()}
-              </p>
-              <p
-                className="osto-count-up mt-0.5 text-[16px] font-semibold tabular-nums"
+          agent.ts
+        </text>
+
+        {/* Line 1 — prompt arrow */}
+        <text
+          x={cardX + padX} y={cardY + 22 + padY + 12}
+          fontFamily="var(--font-mono)"
+          fontSize="13"
+          fill={sub}
+        >
+          {">"}
+        </text>
+        {/* Line 1 — function call.  resonate.stream() */}
+        <text
+          x={cardX + padX + 16} y={cardY + 22 + padY + 12}
+          fontFamily="var(--font-mono)"
+          fontSize="13"
+          fill={ink}
+        >
+          resonate.stream(
+        </text>
+        <text
+          x={cardX + padX + 16 + 130} y={cardY + 22 + padY + 12}
+          fontFamily="var(--font-mono)"
+          fontSize="13"
+          fill={accent}
+        >
+          {`"hello"`}
+        </text>
+        <text
+          x={cardX + padX + 16 + 184} y={cardY + 22 + padY + 12}
+          fontFamily="var(--font-mono)"
+          fontSize="13"
+          fill={ink}
+        >
+          )
+        </text>
+
+        {/* Line 2 — status row: filled dot + "speaking..." */}
+        <circle
+          cx={cardX + padX + 4}
+          cy={cardY + 22 + padY + 38}
+          r={4}
+          fill={accent}
+        />
+        <text
+          x={cardX + padX + 16} y={cardY + 22 + padY + 42}
+          fontFamily="var(--font-mono)"
+          fontSize="12"
+          fill={sub}
+          letterSpacing="0.02em"
+        >
+          speaking
+        </text>
+        {/* Animated dot trail — each dot fades in and out on a 1.2s
+            cycle with a 400ms stagger, so the row reads as "...". */}
+        {[0, 1, 2].map((i) => (
+          <circle
+            key={i}
+            className="bento-speaking-dot"
+            cx={cardX + padX + 76 + i * 6}
+            cy={cardY + 22 + padY + 38}
+            r={1.6}
+            fill={sub}
+            style={{ animationDelay: `${i * 400}ms` }}
+          />
+        ))}
+        {/* trailing latency tag */}
+        <text
+          x={cardX + cardW - padX} y={cardY + 22 + padY + 42}
+          textAnchor="end"
+          fontFamily="var(--font-mono)"
+          fontSize="11"
+          fill={T.inkSubtle}
+        >
+          92 ms
+        </text>
+
+        {/* Live audio waveform — single horizontal row of bars across
+            the card, brand-blue at the leading edge fading back to gray
+            as it tapers off (it just played those samples). */}
+        <g>
+          {Array.from({ length: 56 }).map((_, i) => {
+            const t = i / 55;
+            // Gaussian-ish envelope biased toward the right (current sample)
+            const env = Math.exp(-Math.pow((t - 0.78) / 0.32, 2));
+            // Deterministic jitter via cheap hash
+            const jitter = (Math.sin(i * 11.37) * 0.5 + 0.5) * 0.45 + 0.55;
+            const h = Math.max(0.15, env * jitter) * 28;
+            const x = cardX + padX + i * ((cardW - padX * 2) / 56);
+            const baseY = cardY + cardH - padY - 14;
+            // Color: bars near the leading edge are accent; further back
+            // they soften toward gray (samples already heard).
+            const bg =
+              t > 0.85 ? accent : t > 0.6 ? BRAND_SOFT : faint === "rgba(10,10,16,0.06)" ? "rgba(10,10,16,0.18)" : faint;
+            return (
+              <rect
+                key={i}
+                className="bento-console-bar"
+                x={x}
+                y={baseY - h / 2}
+                width={3}
+                height={h}
+                fill={bg}
                 style={{
-                  color: s.g ? "#0d8050" : s.c ? color : T.ink,
-                  letterSpacing: "-0.3px",
-                  animationDelay: `${300 + i * 130}ms`,
+                  // Per-bar stagger — the bars to the right (closer to
+                  // the playhead) fire earlier so the height-wave reads
+                  // as travelling left → right toward the cursor.
+                  transformOrigin: `${x + 1.5}px ${baseY}px`,
+                  animationDelay: `${(i * 28) % 1600}ms`,
                 }}
-              >
-                {s.v}
-              </p>
-            </div>
-          ))}
-        </div>
-      </FintaCard>
+              />
+            );
+          })}
+          {/* Playhead — vertical accent line at the leading edge.
+              Soft opacity breath so the cursor reads as "live". */}
+          <line
+            className="bento-console-playhead"
+            x1={cardX + padX + ((cardW - padX * 2) / 56) * 47}
+            y1={cardY + cardH - padY - 30}
+            x2={cardX + padX + ((cardW - padX * 2) / 56) * 47}
+            y2={cardY + cardH - padY + 2}
+            stroke={accent}
+            strokeWidth={1.2}
+          />
+        </g>
+      </svg>
     </div>
   );
 }
 
+// ─── Illustration 2 — Phoneme-aligned audio editor ────────────────────
+// A horizontal timeline strip styled as a fragment of a speech editor
+// (think Praat / Audacity). IPA phoneme tokens span the row; one token
+// is "active" (blue fill), and a vertical playhead crosses it. Below
+// the strip, a single waveform row visualizes the audio backing those
+// phonemes. Reads as "the agent paces on syllables, not tokens."
+function IllusPhoneme({ accent }: { accent: string }) {
+  // Floating composition — no card frame. Tokens sit directly on the
+  // tile background. The blue active-token highlight + playhead STEP
+  // from token 1 → 2 → 3 → ... → 7 in sequence on a 7s loop. Each
+  // token's "active" window is staggered via animationDelay using a
+  // single shared keyframe.
+  //
+  // The waveform underneath breathes continuously, independent of the
+  // playhead — bars scale Y on staggered delays so it reads as live
+  // audio for the entire cycle.
+  const W = 600;
+  const H = 220;
+  const phonemes = [
+    { label: "h",  from: 0.05, to: 0.16 },
+    { label: "ɛ",  from: 0.16, to: 0.30 },
+    { label: "l",  from: 0.30, to: 0.44 },
+    { label: "oʊ", from: 0.44, to: 0.58 },
+    { label: "ð",  from: 0.58, to: 0.70 },
+    { label: "ɛ",  from: 0.70, to: 0.84 },
+    { label: "ɹ",  from: 0.84, to: 0.95 },
+  ];
+  const N_TOKENS = phonemes.length;
+  // Total cycle is 7s; each token is "active" for 1s.
+  const CYCLE_S = 7;
+  // Inner rail
+  const innerX0 = 64;
+  const innerW = W - innerX0 * 2;
+  const px = (frac: number) => innerX0 + frac * innerW;
+  const tokenY = 52;
+  const tokenH = 30;
+  const waveY = tokenY + tokenH + 36;
+  const waveBars = 64;
+  return (
+    <div className="absolute inset-0 flex items-center justify-center px-2">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block" }}
+      >
+        {/* ── Base phoneme tokens — hairline-ringed, always visible ── */}
+        {phonemes.map((p, i) => {
+          const x0 = px(p.from);
+          const x1 = px(p.to);
+          const w = x1 - x0 - 4;
+          return (
+            <g key={`base-${i}`}>
+              <rect
+                x={x0}
+                y={tokenY}
+                width={w}
+                height={tokenH}
+                fill="transparent"
+                stroke={T.ring}
+                strokeWidth={1}
+              />
+              <text
+                x={x0 + w / 2}
+                y={tokenY + tokenH / 2 + 5}
+                textAnchor="middle"
+                fontFamily="var(--font-mono)"
+                fontSize="14"
+                fill={T.ink}
+              >
+                {p.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* ── Per-token active overlay — exactly one is visible at a
+             time, cycling in sequence. Each <g> uses the shared
+             `bento-phoneme-step` keyframe; their animationDelay is
+             offset by -(i/N)*CYCLE so the active highlight advances. ── */}
+        {phonemes.map((p, i) => {
+          const x0 = px(p.from);
+          const x1 = px(p.to);
+          const w = x1 - x0 - 4;
+          const cx = x0 + w / 2;
+          return (
+            <g
+              key={`active-${i}`}
+              className="bento-phoneme-step"
+              style={{
+                animationDelay: `${-(i / N_TOKENS) * CYCLE_S}s`,
+              }}
+            >
+              {/* Active blue fill */}
+              <rect
+                x={x0}
+                y={tokenY}
+                width={w}
+                height={tokenH}
+                fill={accent}
+              />
+              {/* White label on top */}
+              <text
+                x={cx}
+                y={tokenY + tokenH / 2 + 5}
+                textAnchor="middle"
+                fontFamily="var(--font-mono)"
+                fontSize="14"
+                fill="#ffffff"
+              >
+                {p.label}
+              </text>
+              {/* Vertical playhead pinned to this token's center */}
+              <line
+                x1={cx}
+                y1={tokenY - 10}
+                x2={cx}
+                y2={waveY + 38}
+                stroke={accent}
+                strokeWidth={1.4}
+              />
+              <circle cx={cx} cy={tokenY - 10} r={3.5} fill={accent} />
+            </g>
+          );
+        })}
+
+        {/* ── Continuous waveform — bars breathe independently of the
+             playhead so the audio reads as "always live." Each bar
+             has a per-bar stagger so the breath travels left → right
+             across the strip. ── */}
+        {Array.from({ length: waveBars }).map((_, i) => {
+          const t = i / (waveBars - 1);
+          const env = Math.exp(-Math.pow((t - 0.5) / 0.32, 2));
+          const jitter = (Math.sin(i * 9.71) * 0.5 + 0.5) * 0.4 + 0.6;
+          const h = Math.max(0.18, env * jitter) * 38;
+          const x = innerX0 + (i / waveBars) * innerW;
+          // Color: alternate blueSoft / accent / blueDeep based on
+          // position so the strip has its own depth, no longer
+          // dependent on playhead position.
+          const bg =
+            t < 0.30 || t > 0.78 ? BRAND_SOFT :
+            t < 0.55 ? accent : BRAND_DEEP;
+          return (
+            <rect
+              key={`wave-${i}`}
+              className="bento-phoneme-bar"
+              x={x}
+              y={waveY - h / 2}
+              width={3}
+              height={h}
+              fill={bg}
+              style={{
+                transformOrigin: `${x + 1.5}px ${waveY}px`,
+                animationDelay: `${(i * 36) % 1800}ms`,
+              }}
+            />
+          );
+        })}
+
+        {/* Bottom timecode anchors */}
+        <text x={innerX0} y={H - 14} fontFamily="var(--font-mono)" fontSize="10" fill={T.inkSubtle}>
+          0:00
+        </text>
+        <text x={innerX0 + innerW} y={H - 14} textAnchor="end" fontFamily="var(--font-mono)" fontSize="10" fill={T.inkSubtle}>
+          0:01
+        </text>
+        <text x={W / 2} y={H - 14} textAnchor="middle" fontFamily="var(--font-mono)" fontSize="10" fill={accent} letterSpacing="0.04em">
+          alignment · 92 ms
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+
+// ─── Illustration 3 — Voice cloning card ──────────────────────────────
+// A "voice library" panel showing a 30-second sample being uploaded
+// (waveform clip + filename), then a "Voice ready" status row with the
+// cloned voice surfaced as a selectable item. Reads as "upload → done"
+// without resorting to fingerprints, retinal-scan rings, or polar plots.
+function IllusFingerprint({ accent }: { accent: string }) {
+  // Voice cloning as a multi-step AI process that loops:
+  //   Step 1 (0–33%)  Scanning sample      → progress 0→33%, status spinner
+  //   Step 2 (33–66%) Building voiceprint  → progress 33→66%
+  //   Step 3 (66–95%) Cloning voice        → progress 66→100%
+  //   Step 4 (95–100%) Voice ready!        → voice card highlights with
+  //                                          a brand-blue ring pulse
+  // Loop length 6s. The status label text and progress fill share the
+  // same 6s timeline so the readout and bar stay in lockstep.
+  const W = 600;
+  const H = 220;
+  const innerX0 = 48;
+  const innerW = W - innerX0 * 2;
+  const uploadY = 24;
+  const dividerY = uploadY + 64;
+  const readyY = dividerY + 24;
+  const progressX = innerX0 + 50;
+  const progressW = innerW - 50 - 90;
+  return (
+    <div className="absolute inset-0 flex items-center justify-center px-2">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block" }}
+      >
+        {/* ── Upload / process row ── */}
+        {/* Source tile — shows .wav, then animates to a spinning icon
+             during the "building" phase via a subtle pulse on the tile
+             itself (`bento-clone-source`). */}
+        <rect
+          className="bento-clone-source"
+          x={innerX0}
+          y={uploadY}
+          width={36}
+          height={36}
+          fill={T.panel}
+          stroke={T.ring}
+          strokeWidth={1}
+          style={{ transformOrigin: `${innerX0 + 18}px ${uploadY + 18}px` }}
+        />
+        <text
+          x={innerX0 + 18}
+          y={uploadY + 23}
+          textAnchor="middle"
+          fontFamily="var(--font-mono)" fontSize="11" fill={T.inkMid}
+          letterSpacing="0.02em"
+        >
+          wav
+        </text>
+
+        {/* Filename */}
+        <text
+          x={innerX0 + 50}
+          y={uploadY + 14}
+          fontFamily="var(--font-sans)" fontSize="13" fill={T.ink} fontWeight={500}
+        >
+          sample_ava.wav
+        </text>
+
+        {/* Cycling status label — 4 lines stacked, one visible at a time.
+             Each shares `bento-clone-status` with a 6s cycle and a
+             staggered animationDelay so they appear in order. */}
+        {[
+          "Scanning sample · · ·",
+          "Building voiceprint · · ·",
+          "Cloning voice · · ·",
+          "Voice ready",
+        ].map((label, i) => (
+          <text
+            key={i}
+            className="bento-clone-status"
+            x={innerX0 + 50}
+            y={uploadY + 30}
+            fontFamily="var(--font-mono)" fontSize="10.5"
+            fill={i === 3 ? accent : T.inkMid}
+            letterSpacing="0.02em"
+            style={{ animationDelay: `${-(i / 4) * 6}s` }}
+          >
+            {label}
+          </text>
+        ))}
+
+        {/* Progress track */}
+        <rect
+          x={progressX}
+          y={uploadY + 42}
+          width={progressW}
+          height={3}
+          fill={T.ring}
+        />
+        {/* Progress fill — animates from 0 → 100% via scaleX, then
+             resets. Wrapped in its own keyframe so the bar advances
+             through the 3 processing phases. */}
+        <rect
+          className="bento-clone-progress"
+          x={progressX}
+          y={uploadY + 42}
+          width={progressW}
+          height={3}
+          fill={accent}
+          style={{ transformOrigin: `${progressX}px ${uploadY + 43.5}px` }}
+        />
+
+        {/* Percentage readout — cycles 0 / 33 / 66 / 100 in step with
+             the progress bar. Four <text>s stacked, only one visible
+             at a time via `bento-clone-pct` staggered delays. */}
+        {["0%", "33%", "66%", "100%"].map((pct, i) => (
+          <text
+            key={i}
+            className="bento-clone-pct"
+            x={innerX0 + innerW}
+            y={uploadY + 46}
+            textAnchor="end"
+            fontFamily="var(--font-mono)" fontSize="10.5" fill={accent}
+            letterSpacing="0.02em"
+            style={{ animationDelay: `${-(i / 4) * 6}s` }}
+          >
+            {pct}
+          </text>
+        ))}
+
+        {/* ── Hairline divider ── */}
+        <line
+          x1={innerX0}
+          y1={dividerY}
+          x2={innerX0 + innerW}
+          y2={dividerY}
+          stroke={T.ring}
+        />
+
+        {/* ── Voice-ready card.
+             The whole card is wrapped in `.bento-clone-ready-card`,
+             which gets a brand-blue ring pulse during the last quarter
+             of the cycle (when status reads "Voice ready"). */}
+        <g
+          className="bento-clone-ready-card"
+          style={{ transformOrigin: `${innerX0 + innerW / 2}px ${readyY + 18}px` }}
+        >
+          {/* Card surround — invisible normally, becomes a glowing
+              accent ring during the "ready" phase. */}
+          <rect
+            className="bento-clone-ready-ring"
+            x={innerX0 - 6}
+            y={readyY - 6}
+            width={innerW + 12}
+            height={48}
+            fill="none"
+            stroke={accent}
+            strokeWidth={1.5}
+            opacity={0}
+          />
+          {/* Avatar tile */}
+          <rect
+            x={innerX0}
+            y={readyY}
+            width={36}
+            height={36}
+            fill={accent}
+          />
+          <text
+            x={innerX0 + 18}
+            y={readyY + 24}
+            textAnchor="middle"
+            fontFamily="var(--font-sans)" fontSize="16" fill="#ffffff" fontWeight={600}
+          >
+            A
+          </text>
+
+          {/* Voice name + descriptor */}
+          <text
+            x={innerX0 + 50}
+            y={readyY + 14}
+            fontFamily="var(--font-sans)" fontSize="13" fill={T.ink} fontWeight={500}
+          >
+            Ava (cloned)
+          </text>
+          <text
+            x={innerX0 + 50}
+            y={readyY + 30}
+            fontFamily="var(--font-mono)" fontSize="10.5" fill={T.inkMid}
+            letterSpacing="0.02em"
+          >
+            warm · en-US · 32 languages
+          </text>
+
+          {/* Status pill */}
+          <rect
+            x={innerX0 + innerW - 70}
+            y={readyY + 8}
+            width={70}
+            height={20}
+            fill={T.panel}
+            stroke={T.ring}
+            strokeWidth={1}
+          />
+          <circle
+            className="bento-ready-dot"
+            cx={innerX0 + innerW - 60}
+            cy={readyY + 18}
+            r={3}
+            fill={accent}
+            style={{ transformOrigin: `${innerX0 + innerW - 60}px ${readyY + 18}px` }}
+          />
+          <text
+            x={innerX0 + innerW - 50}
+            y={readyY + 22}
+            fontFamily="var(--font-mono)" fontSize="11" fill={T.ink}
+            letterSpacing="0.02em"
+          >
+            Ready
+          </text>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Illustration 4 — Two-channel transcript ──────────────────────────
+// A snippet of a live transcript with two channels (AGENT + CALLER)
+// sharing the same timeline. Mid-sentence, the caller cuts in — the
+// agent's line shows a trailing ellipsis and a small "yielded" tag.
+// Reads as turn-taking in flight, not as abstract motion trails.
+function IllusConversation({ accent }: { accent: string }) {
+  // Looping caller/agent dialogue. Three turn-pairs cycle in sequence
+  // over 9 seconds — each pair = 3s. The CALLER row shows what the
+  // caller just said; the AGENT row shows the agent's response.
+  //
+  // Implementation: render all 3 caller bubbles and all 3 agent
+  // bubbles stacked at the same coords, then cycle which one is
+  // visible via a shared `bento-turn-step` keyframe with staggered
+  // delays. Agent bubbles fire 1s after their caller counterpart so
+  // each turn-pair reads as "caller speaks → agent responds."
+  const W = 600;
+  const H = 220;
+  const innerX0 = 48;
+  const labelW = 64;
+  const rowH = 36;
+  const rowGap = 14;
+  const callerY = 30;
+  const agentY = callerY + rowH + rowGap;
+  const bubbleX = innerX0 + labelW + 12;
+  const bubbleW = W - innerX0 - bubbleX;
+
+  // The three turn-pairs. Each is a [caller line, agent response].
+  const turns: Array<[string, string]> = [
+    ["Change my flight to Tuesday", "Updating reservation"],
+    ["What's the new departure time?", "Booked for 4:15 PM"],
+    ["Send the confirmation to my phone", "Sent · check messages"],
+  ];
+  const CYCLE_S = 9;
+  return (
+    <div className="absolute inset-0 flex items-center justify-center px-2">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: "block" }}
+      >
+        {/* ── Static channel labels (always visible) ── */}
+        {/* CALLER label */}
+        <rect
+          x={innerX0}
+          y={callerY + 6}
+          width={labelW}
+          height={20}
+          fill={accent}
+        />
+        <text
+          x={innerX0 + labelW / 2}
+          y={callerY + 20}
+          textAnchor="middle"
+          fontFamily="var(--font-mono)" fontSize="10" fill="#ffffff"
+          letterSpacing="0.06em"
+        >
+          CALLER
+        </text>
+        {/* AGENT label */}
+        <rect
+          x={innerX0}
+          y={agentY + 6}
+          width={labelW}
+          height={20}
+          fill={T.panel}
+          stroke={T.ring}
+          strokeWidth={1}
+        />
+        <text
+          x={innerX0 + labelW / 2}
+          y={agentY + 20}
+          textAnchor="middle"
+          fontFamily="var(--font-mono)" fontSize="10" fill={T.inkMid}
+          letterSpacing="0.06em"
+        >
+          AGENT
+        </text>
+
+        {/* ── Cycling CALLER bubbles ── */}
+        {turns.map(([caller], i) => (
+          <g
+            key={`caller-${i}`}
+            className="bento-turn-step"
+            style={{ animationDelay: `${-(i / turns.length) * CYCLE_S}s` }}
+          >
+            <rect
+              x={bubbleX}
+              y={callerY}
+              width={bubbleW}
+              height={rowH - 4}
+              fill="#ffffff"
+              stroke={accent}
+              strokeWidth={1.4}
+            />
+            <text
+              x={bubbleX + 14}
+              y={callerY + 21}
+              fontFamily="var(--font-sans)" fontSize="13" fill={T.ink}
+            >
+              {caller}
+            </text>
+          </g>
+        ))}
+
+        {/* ── Cycling AGENT bubbles — fire ~1s after their caller
+             counterpart so each turn pair reads as "caller speaks →
+             agent responds." ── */}
+        {turns.map(([, agent], i) => (
+          <g
+            key={`agent-${i}`}
+            className="bento-turn-step bento-turn-step-agent"
+            style={{ animationDelay: `${-(i / turns.length) * CYCLE_S + 1.2}s` }}
+          >
+            <rect
+              x={bubbleX}
+              y={agentY}
+              width={bubbleW - 70}
+              height={rowH - 4}
+              fill={T.panel}
+              stroke={T.ring}
+              strokeWidth={1}
+            />
+            <text
+              x={bubbleX + 14}
+              y={agentY + 21}
+              fontFamily="var(--font-sans)" fontSize="13" fill={T.ink}
+            >
+              {agent}
+            </text>
+            {/* Typing dots — agent is "thinking/responding" */}
+            {[0, 1, 2].map((d) => (
+              <circle
+                key={d}
+                className="bento-typing-dot"
+                cx={bubbleX + bubbleW - 90 + d * 6}
+                cy={agentY + 17}
+                r={1.8}
+                fill={T.inkMid}
+                style={{ animationDelay: `${d * 360}ms` }}
+              />
+            ))}
+            {/* Action pill on the right of the agent row — visually
+                marks the agent "doing" something. */}
+            <rect
+              x={W - innerX0 - 60}
+              y={agentY + 6}
+              width={60}
+              height={20}
+              fill="rgba(59,130,246,0.08)"
+              stroke={accent}
+              strokeWidth={1}
+            />
+            <text
+              x={W - innerX0 - 30}
+              y={agentY + 20}
+              textAnchor="middle"
+              fontFamily="var(--font-mono)" fontSize="9.5" fill={accent}
+              letterSpacing="0.04em"
+            >
+              tool
+            </text>
+          </g>
+        ))}
+
+        {/* Bottom caption */}
+        <text
+          x={innerX0}
+          y={H - 14}
+          fontFamily="var(--font-mono)" fontSize="10" fill={T.inkSubtle}
+        >
+          live
+        </text>
+        <text
+          x={W - innerX0}
+          y={H - 14}
+          textAnchor="end"
+          fontFamily="var(--font-mono)" fontSize="10" fill={accent}
+          letterSpacing="0.04em"
+        >
+          turn-taking · 92 ms
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Animation styles ─────────────────────────────────────────────────
 export function OstoModulesStyles() {
   return (
     <style>{`
-      @keyframes ostoTileEnter {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
+      /* Waveform bars: breathe their height. */
+      @keyframes resonateModBar {
+        0%, 100% { transform: scaleY(1); }
+        50%      { transform: scaleY(0.5); }
       }
-      .osto-tile-fade {
-        animation: ostoTileEnter 480ms cubic-bezier(0.2,0.8,0.2,1) both;
-      }
-      .osto-tile-rise {
-        animation: ostoTileEnter 600ms cubic-bezier(0.2,0.8,0.2,1) both;
-      }
-
-      /* ── Per-illustration motion ───────────────────────────────── */
-
-      /* Soft "live" dot — green or brand status pulse */
-      @keyframes ostoLivePulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.55; transform: scale(0.85); }
-      }
-      .osto-live { animation: ostoLivePulse 1.6s ease-in-out infinite; transform-origin: center; }
-
-      /* Slow soft glow for status chips */
-      @keyframes ostoChipGlow {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-      }
-      .osto-chip-glow { animation: ostoChipGlow 2.4s ease-in-out infinite; }
-
-      /* CSPM Auto-fix button shimmer */
-      @keyframes ostoBtnShimmer {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(28,38,122,0); }
-        50% { box-shadow: 0 0 0 4px rgba(28,38,122,0.18); }
-      }
-      .osto-btn-shimmer { animation: ostoBtnShimmer 2.2s ease-in-out infinite; }
-
-      /* WAF / Logs row sweep — highlighted row gets a subtle horizontal sheen */
-      @keyframes ostoRowSheen {
-        0%, 100% { background-position: 200% 0; }
-        50% { background-position: -100% 0; }
-      }
-      .osto-row-sheen {
-        background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%);
-        background-size: 60% 100%;
-        background-repeat: no-repeat;
-        animation: ostoRowSheen 2.8s ease-in-out infinite;
+      .resonate-mod-bar {
+        transform-origin: center;
+        animation: resonateModBar 1800ms ease-in-out infinite;
       }
 
-      /* New-row slide in (used for live feeds) */
-      @keyframes ostoSlideIn {
-        0% { opacity: 0; transform: translateX(-6px); }
-        100% { opacity: 1; transform: translateX(0); }
+      /* Streaming waveform playhead: scrubs across the strip. */
+      @keyframes resonatePlayhead {
+        0%   { left: 6%; opacity: 0; }
+        8%   { opacity: 1; }
+        92%  { opacity: 1; }
+        100% { left: 94%; opacity: 0; }
       }
-      .osto-slide-in { animation: ostoSlideIn 700ms cubic-bezier(0.2,0.8,0.2,1) both; }
-
-      /* Web scanner progress bar — fills 0→52% over time then resets */
-      @keyframes ostoProgressLoop {
-        0% { width: 18%; }
-        85% { width: 78%; }
-        100% { width: 18%; }
+      .resonate-playhead {
+        animation: resonatePlayhead 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
-      .osto-progress-loop { animation: ostoProgressLoop 4s ease-in-out infinite; }
 
-      /* Single sweep — encryption fill once, hold */
-      @keyframes ostoFillOnce {
-        0% { transform: scaleX(0); }
-        100% { transform: scaleX(1); }
-      }
-      .osto-fill-once { animation: ostoFillOnce 1.4s cubic-bezier(0.2,0.8,0.2,1) both; transform-origin: left center; }
-
-      /* Vertical fill — Swipe wipe rises */
-      @keyframes ostoFillUp {
-        0% { height: 0%; }
-        100% { height: 62%; }
-      }
-      .osto-fill-up { animation: ostoFillUp 2s cubic-bezier(0.2,0.8,0.2,1) both; }
-
-      /* Subtle scan line — vertical sweep on a card body */
-      @keyframes ostoScanLine {
-        0% { transform: translateY(-100%); opacity: 0; }
-        20% { opacity: 0.7; }
-        80% { opacity: 0.7; }
-        100% { transform: translateY(120%); opacity: 0; }
-      }
-      .osto-scan-line { animation: ostoScanLine 2.6s ease-in-out infinite; }
-
-      /* Highlighted code line breath */
-      @keyframes ostoLineBreath {
-        0%, 100% { background-color: rgba(28,38,122,0.06); }
-        50% { background-color: rgba(28,38,122,0.16); }
-      }
-      .osto-line-breath { animation: ostoLineBreath 2.2s ease-in-out infinite; }
-
-      /* Shield/icon emphasis ring */
-      @keyframes ostoIconPulse {
+      /* Fingerprint polygon: subtle pulse around its center. */
+      @keyframes resonateFingerprintPulse {
         0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.08); }
+        50%      { transform: scale(1.03); }
       }
-      .osto-icon-pulse { animation: ostoIconPulse 2.4s ease-in-out infinite; transform-origin: center; }
-
-      /* Stamp / blocked badge — settle */
-      @keyframes ostoStampIn {
-        0% { opacity: 0; transform: scale(1.15) rotate(-3deg); }
-        60% { opacity: 1; transform: scale(0.97) rotate(-1deg); }
-        100% { opacity: 1; transform: scale(1) rotate(0); }
+      .resonate-fingerprint-pulse {
+        transform-origin: 100px 100px;
+        animation: resonateFingerprintPulse 4.2s ease-in-out infinite;
       }
-      .osto-stamp { animation: ostoStampIn 800ms cubic-bezier(0.2,0.8,0.2,1) both; }
 
-      /* DLP masked column shimmer — keep stripes moving */
-      @keyframes ostoMaskShift {
-        0% { background-position: 0 0; }
-        100% { background-position: 12px 0; }
+      /* Live dot: slow pulse. */
+      @keyframes resonateLiveDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%      { opacity: 0.55; transform: scale(0.85); }
       }
-      .osto-mask-shift { animation: ostoMaskShift 1.4s linear infinite; }
-
-      /* Sparkle rotation for AI icon */
-      @keyframes ostoSparkle {
-        0%, 100% { transform: rotate(0); opacity: 1; }
-        50% { transform: rotate(20deg); opacity: 0.85; }
+      .resonate-live-dot {
+        animation: resonateLiveDot 1.6s ease-in-out infinite;
+        transform-origin: center;
       }
-      .osto-sparkle { animation: ostoSparkle 2.8s ease-in-out infinite; transform-origin: center; }
 
-      /* Type-in cursor / text-revealing caret */
-      @keyframes ostoCaret {
-        0%, 49% { opacity: 1; }
-        50%, 100% { opacity: 0; }
+
+      /* ─── Bento tile animations ───────────────────────────────────
+         Per-tile loops that mirror the action the illustration depicts.
+         All transform-only / opacity-only so they're GPU-cheap, and all
+         opt out under prefers-reduced-motion. */
+
+      /* Tile 1 — Console waveform bars. Per-bar scaleY breath with a
+         travelling-wave stagger applied inline via animationDelay. */
+      @keyframes bentoConsoleBar {
+        0%, 100% { transform: scaleY(0.55); }
+        50%      { transform: scaleY(1); }
       }
-      .osto-caret { animation: ostoCaret 900ms steps(1) infinite; display: inline-block; }
-
-      /* Compliance bars fill from 0 → final width on tab change */
-      @keyframes ostoBarFill {
-        from { transform: scaleX(0); }
-        to { transform: scaleX(1); }
+      .bento-console-bar {
+        animation: bentoConsoleBar 1600ms ease-in-out infinite;
       }
-      .osto-bar-fill { animation: ostoBarFill 1.3s cubic-bezier(0.2,0.8,0.2,1) both; transform-origin: left center; }
-
-      /* VAPT count-up — quick number flicker on enter */
-      @keyframes ostoCountUp {
-        0% { opacity: 0; transform: translateY(6px); }
-        100% { opacity: 1; transform: translateY(0); }
-      }
-      .osto-count-up { animation: ostoCountUp 700ms cubic-bezier(0.2,0.8,0.2,1) both; }
-
-      /* Soft float — phones, drives, USB plugs */
-      @keyframes ostoFloat {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-3px); }
-      }
-      .osto-float { animation: ostoFloat 3.2s ease-in-out infinite; }
-
-      /* Browser address-bar lock blink for Domain */
-      @keyframes ostoBlockBlink {
+      /* Tile 1 — Console playhead. Soft opacity breath. */
+      @keyframes bentoConsolePlayhead {
         0%, 100% { opacity: 1; }
-        50% { opacity: 0.55; }
+        50%      { opacity: 0.45; }
       }
-      .osto-block-blink { animation: ostoBlockBlink 1.8s ease-in-out infinite; }
+      .bento-console-playhead {
+        animation: bentoConsolePlayhead 1400ms ease-in-out infinite;
+      }
+      /* Tile 1 + Tile 4 — typing/speaking dots: opacity pulse, staggered
+         via inline animationDelay. */
+      @keyframes bentoDotPulse {
+        0%, 100% { opacity: 0.2; }
+        50%      { opacity: 0.9; }
+      }
+      .bento-speaking-dot,
+      .bento-typing-dot {
+        animation: bentoDotPulse 1200ms ease-in-out infinite;
+      }
 
-      /* Checkmark draw — used for ZTNA / Mobile / Training selections */
-      @keyframes ostoCheckDraw {
-        from { stroke-dashoffset: 12; }
-        to { stroke-dashoffset: 0; }
+      /* Tile 2 — Phoneme step.
+         Each token has its own .bento-phoneme-step <g> with the same
+         7s keyframe but a staggered animationDelay = -(i/7)*7s, so
+         exactly one token is visible (opacity 1) at a time, cycling
+         left → right and looping back to the first.
+         The 100/7 ≈ 14.3% of the cycle = ~1s per token. We give each
+         a tiny crossfade in/out so it doesn't strobe. */
+      @keyframes bentoPhonemeStep {
+        0%     { opacity: 0; }
+        2%     { opacity: 1; }
+        13.5%  { opacity: 1; }
+        14.3%  { opacity: 0; }
+        100%   { opacity: 0; }
       }
-      .osto-check-draw path {
-        stroke-dasharray: 12;
-        stroke-dashoffset: 12;
-        animation: ostoCheckDraw 600ms cubic-bezier(0.2,0.8,0.2,1) both;
+      .bento-phoneme-step {
+        opacity: 0;
+        animation: bentoPhonemeStep 7s linear infinite;
       }
 
-      /* Generic appear — fades and rises with delay support via inline style */
-      @keyframes ostoAppear {
-        from { opacity: 0; transform: translateY(4px); }
-        to { opacity: 1; transform: translateY(0); }
+      /* Tile 2 — waveform bars breathe continuously, independent of
+         the token playhead. Per-bar scaleY pulse with travelling
+         stagger via inline animationDelay. */
+      @keyframes bentoPhonemeBar {
+        0%, 100% { transform: scaleY(0.5); }
+        50%      { transform: scaleY(1); }
       }
-      .osto-appear { animation: ostoAppear 600ms cubic-bezier(0.2,0.8,0.2,1) both; }
+      .bento-phoneme-bar {
+        animation: bentoPhonemeBar 1800ms ease-in-out infinite;
+      }
+
+      /* Tile 3 — Voice clone. The cycle is 6s long and goes through
+         4 phases of equal duration: scanning, building, cloning, ready.
+         All elements use the same 6s timeline so they stay in lockstep. */
+
+      /* Progress bar fills 0→33→66→100 in 3 ramped jumps, then resets. */
+      @keyframes bentoCloneProgress {
+        0%    { transform: scaleX(0.02); }
+        25%   { transform: scaleX(0.33); }
+        50%   { transform: scaleX(0.66); }
+        75%   { transform: scaleX(1); }
+        92%   { transform: scaleX(1); }
+        100%  { transform: scaleX(0.02); }
+      }
+      .bento-clone-progress {
+        animation: bentoCloneProgress 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+
+      /* Cycling status text — 4 lines, one visible at a time. Each
+         <text> has the same keyframe and offsets via animationDelay. */
+      @keyframes bentoCloneStatus {
+        0%     { opacity: 0; }
+        2%     { opacity: 1; }
+        23%    { opacity: 1; }
+        25%    { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      .bento-clone-status {
+        opacity: 0;
+        animation: bentoCloneStatus 6s linear infinite;
+      }
+
+      /* Cycling percentage — same pattern as the status text. */
+      @keyframes bentoClonePct {
+        0%     { opacity: 0; }
+        2%     { opacity: 1; }
+        23%    { opacity: 1; }
+        25%    { opacity: 0; }
+        100%   { opacity: 0; }
+      }
+      .bento-clone-pct {
+        opacity: 0;
+        animation: bentoClonePct 6s linear infinite;
+      }
+
+      /* Source tile breathes through the "building" phase — a soft
+         scale pulse to suggest processing. */
+      @keyframes bentoCloneSource {
+        0%, 25%, 75%, 100% { transform: scale(1); }
+        50%                 { transform: scale(0.92); }
+      }
+      .bento-clone-source {
+        animation: bentoCloneSource 6s ease-in-out infinite;
+      }
+
+      /* "Voice ready" highlight — the surround ring pulses on visible
+         during the last quarter of the cycle, when the status reads
+         "Voice ready". */
+      @keyframes bentoCloneReadyRing {
+        0%, 73%   { opacity: 0; transform: scale(0.99); }
+        78%       { opacity: 0.5; transform: scale(1.02); }
+        86%       { opacity: 1; transform: scale(1); }
+        96%       { opacity: 0.5; transform: scale(1.01); }
+        100%      { opacity: 0; transform: scale(0.99); }
+      }
+      .bento-clone-ready-ring {
+        transform-origin: center;
+        animation: bentoCloneReadyRing 6s ease-out infinite;
+      }
+
+      /* Ready dot — slow opacity pulse, always on (the avatar's
+         status indicator). */
+      @keyframes bentoReadyDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50%      { opacity: 0.45; transform: scale(0.7); }
+      }
+      .bento-ready-dot {
+        animation: bentoReadyDot 1800ms ease-in-out infinite;
+      }
+
+      /* Tile 4 — Transcript turn cycle. 9s loop, 3 turn-pairs of 3s
+         each. Within each 3s window, the caller bubble fades in and
+         stays visible for ~2s, then fades out and the next pair takes
+         over. Each pair's caller and agent <g> shares this keyframe
+         with staggered animationDelays (the agent fires 1.2s after
+         its caller so each pair reads as a real exchange). */
+      @keyframes bentoTurnStep {
+        0%    { opacity: 0; transform: translateY(4px); }
+        5%    { opacity: 1; transform: translateY(0); }
+        30%   { opacity: 1; transform: translateY(0); }
+        33.3% { opacity: 0; transform: translateY(0); }
+        100%  { opacity: 0; transform: translateY(0); }
+      }
+      .bento-turn-step {
+        opacity: 0;
+        animation: bentoTurnStep 9s ease-in-out infinite;
+      }
 
       @media (prefers-reduced-motion: reduce) {
-        .osto-tile-fade, .osto-tile-rise,
-        .osto-live, .osto-chip-glow, .osto-btn-shimmer, .osto-row-sheen,
-        .osto-slide-in, .osto-progress-loop, .osto-fill-once, .osto-fill-up,
-        .osto-scan-line, .osto-line-breath, .osto-icon-pulse, .osto-stamp,
-        .osto-mask-shift, .osto-sparkle, .osto-caret, .osto-bar-fill,
-        .osto-count-up, .osto-float, .osto-block-blink, .osto-check-draw path,
-        .osto-appear {
+        .resonate-mod-bar,
+        .resonate-playhead,
+        .resonate-fingerprint-pulse,
+        .resonate-live-dot,
+        .bento-console-bar,
+        .bento-console-playhead,
+        .bento-speaking-dot,
+        .bento-typing-dot,
+        .bento-phoneme-step,
+        .bento-phoneme-bar,
+        .bento-clone-progress,
+        .bento-clone-status,
+        .bento-clone-pct,
+        .bento-clone-source,
+        .bento-clone-ready-ring,
+        .bento-ready-dot,
+        .bento-turn-step {
           animation: none !important;
+        }
+        /* Lock displays to a sensible final state in reduced-motion
+           mode so the illustrations still read as "complete." */
+        .bento-phoneme-step:first-of-type,
+        .bento-clone-status:last-of-type,
+        .bento-clone-pct:last-of-type,
+        .bento-turn-step:first-of-type {
+          opacity: 1;
+        }
+        .bento-clone-progress {
+          transform: scaleX(1);
+        }
+        .bento-clone-ready-ring {
+          opacity: 1;
         }
       }
     `}</style>

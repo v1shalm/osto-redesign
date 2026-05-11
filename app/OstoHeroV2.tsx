@@ -1,87 +1,208 @@
 "use client";
 
 /**
- * osto.one — V2.
+ * Resonate — marketing site.
  *
- * AccessGrid-inspired design system applied to osto's product story.
- * Tokens, elevation language, type scale, button shadows, nav capsule,
- * card construction, dashed-grid section frame, and dark stats panel
- * all match the AccessGrid customer page treatment exactly. Content,
- * illustrations, and brand color (osto navy) are osto's own.
+ * Light-theme design system with a single brand accent (electric blue)
+ * and tokenized depth (PALETTE → T → E → GRAD). Every color, surface,
+ * and shadow derives from PALETTE so re-theming is a one-place edit.
+ * Sharp corners throughout; no rounded geometry. Page rails frame
+ * every section; full-bleed bands (bento, HowItWorks, FinalCTA, footer)
+ * extend to those rails.
  */
 
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { OstoModules, OstoModulesStyles } from "./OstoModules";
 
-// ─── Design tokens (lifted from AccessGrid's live CSS) ────────────────
+// ─── Brand wordmark ───────────────────────────────────────────────────
+// Resonate logo — a filled square "source" with three angular chevron
+// waves radiating to the right. Sharp geometry throughout, matching the
+// site's no-roundness design rule. Paired with the wordmark.
+function ResonateLogo({ size = 18, dark = false }: { size?: number; dark?: boolean }) {
+  const ink = dark ? "#ffffff" : "#0a0a10";
+  const wave = dark ? "#ffffff" : "#3b82f6";
+  const dot = dark ? "#ffffff" : "#3b82f6";
+  const w = Math.round(size * 1.2);
+  const h = size;
+  return (
+    <span
+      className="inline-flex items-center"
+      style={{ gap: Math.round(size * 0.42) }}
+      aria-label="Resonate"
+    >
+      <svg
+        aria-hidden
+        width={w}
+        height={h}
+        viewBox="0 0 24 20"
+        fill="none"
+        style={{ display: "inline-block", flexShrink: 0 }}
+      >
+        {/* source — filled square */}
+        <rect x="3" y="7" width="6" height="6" fill={dot} />
+        {/* chevron wave 1 — strongest */}
+        <path d="M 11 5 L 14 10 L 11 15" stroke={wave} strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter" fill="none" opacity="0.95" />
+        {/* chevron wave 2 — mid */}
+        <path d="M 15.5 3 L 19 10 L 15.5 17" stroke={wave} strokeWidth="1.6" strokeLinecap="square" strokeLinejoin="miter" fill="none" opacity="0.55" />
+        {/* chevron wave 3 — outer, faded */}
+        <path d="M 20 1 L 23.5 10 L 20 19" stroke={wave} strokeWidth="1.4" strokeLinecap="square" strokeLinejoin="miter" fill="none" opacity="0.25" />
+      </svg>
+      <span
+        style={{
+          fontFamily: "var(--font-sans)",
+          fontWeight: 600,
+          fontSize: Math.round(size * 0.95),
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          color: ink,
+        }}
+      >
+        Resonate
+      </span>
+    </span>
+  );
+}
+
+// ─── PALETTE — single source of truth ─────────────────────────────────
+// Change colors here and the entire site re-themes. Every other token
+// (T, E, GRAD, DASH) is derived from this object — no other file
+// should hard-code a hex value. To swap the brand, just edit PALETTE.
+//
+// Site is a light, paper-toned canvas with the four brand accents used
+// sparingly: buttons, headline highlight, illustrations, focus rings.
+// Accents are never bleed into the page background.
+const PALETTE = {
+  // ── Surface ramp (light) ──
+  // Off-white base tinted very slightly cool so brand accents feel native.
+  page:        "#fafafa",   // root canvas
+  surface:     "#ffffff",   // raised cards, elevated panels
+  panel:       "#f4f4f6",   // section bands, bento frame
+  panelDeep:   "#eeeef1",   // deepest band (footer underlay)
+
+  // ── Ink ramp (dark text on light) ──
+  // Slight cool tint so it sits with the brand blue rather than fighting it.
+  ink:         "#0a0a10",   // primary headlines
+  inkStrong:   "#1a1a22",   // body emphasis
+  inkSoft:     "#3a3a48",   // standard body
+  inkMid:      "#5a5a6e",   // secondary body
+  inkSubtle:   "#737386",   // captions, helper text (WCAG AA on light)
+  inkFaint:    "#a0a0b0",   // disabled, watermark
+
+  // ── Hairlines on light ──
+  ring:        "rgba(10,10,16,0.08)",    // standard card edge
+  ringStrong:  "rgba(10,10,16,0.14)",    // emphasized edge
+  ringFaint:   "rgba(10,10,16,0.04)",    // barely-there separator
+
+  // ── Brand accent — single channel ──
+  // The site uses one accent. Everything else is white, grays, and black.
+  // Used only on buttons, links, the headline highlight word, and the
+  // product waveform. Never as a page-level background wash.
+  blue:        "#3b82f6",   // primary — buttons, links, headline highlight
+  blueDeep:    "#2563eb",   // button mid-stop, text-on-light brand label
+  blueDark:    "#1d4ed8",   // button bottom, ring
+  blueSoft:    "#93c5fd",   // light tint — secondary fills in illustrations
+  // Legacy alias slots — old code referenced cyan / violet / pink. They
+  // all collapse to the single brand channel now (varied by tint).
+  cyan:        "#93c5fd",   // soft tint
+  violet:      "#3b82f6",   // primary
+  pink:        "#2563eb",   // deep
+};
+
+// ─── Design tokens — derived from PALETTE ─────────────────────────────
 const T = {
   // Surfaces
-  page: "#ffffff",
-  panel: "#f7f7f8",          // ag-gray-50
-  surface: "#ffffff",
-  panelHairline: "#eeeef0",  // ag-gray-100 (used as 0.5px hairline between tiles)
+  page:          PALETTE.page,
+  surface:       PALETTE.surface,
+  panel:         PALETTE.panel,
+  panelDeep:     PALETTE.panelDeep,
+  panelHairline: PALETTE.ringFaint,
 
-  // Ink — AG gray ramp, exact
-  ink: "#26262b",            // ag-gray-950
-  inkStrong: "#42424a",      // ag-gray-800
-  inkSoft: "#5e5f6b",        // ag-gray-600
-  inkMid: "#747583",         // ag-gray-500
-  inkSubtle: "#92939e",      // ag-gray-400
-  inkFaint: "#b8b9c1",       // ag-gray-300
-  inkLine: "#d9d9de",        // ag-gray-200
+  // Ink
+  ink:        PALETTE.ink,
+  inkStrong:  PALETTE.inkStrong,
+  inkSoft:    PALETTE.inkSoft,
+  inkMid:     PALETTE.inkMid,
+  inkSubtle:  PALETTE.inkSubtle,
+  inkFaint:   PALETTE.inkFaint,
+  inkLine:    PALETTE.ring,
 
-  // Lines (rendered as ring-shadows, AG never uses CSS borders)
-  ring: "rgba(38,38,43,0.08)",
-  ringStrong: "rgba(38,38,43,0.10)",
+  // Hairlines
+  ring:       PALETTE.ring,
+  ringStrong: PALETTE.ringStrong,
 
-  // Brand — osto's actual navy palette (lifted from osto.one's CSS vars)
-  accent: "#2e3d9e",         // --navy-2 — eyebrow, headline highlight, links
-  accentDeep: "#1c267a",     // --blue — primary brand
-  btnTop: "#2e3d9e",
-  btnBot: "#1c267a",
-  btnRing: "#141d5c",        // --navy-3
+  // Brand accents (legacy names — kept so existing components don't churn)
+  accent:        PALETTE.blue,         // primary brand — buttons, large headlines
+  accentText:    PALETTE.blueDeep,     // darker — for text-on-light (WCAG AA)
+  accentCyan:    PALETTE.cyan,
+  accentViolet:  PALETTE.violet,
+  accentPink:    PALETTE.pink,
+
+  // Button stops
+  btnTop: PALETTE.blue,
+  btnBot: PALETTE.blueDark,
+  btnRing: PALETTE.blueDark,
 
   // Type
-  fontSans: "var(--font-sans)",
+  fontSans:    "var(--font-sans)",
   fontDisplay: "var(--font-sans)",
+  fontMono:    "var(--font-mono)",
 };
 
-// ─── Elevation tokens ─────────────────────────────────────────────────
-// Cards use a crisp 1px ring by default. cardElevated layers shadows
-// for the upsell pattern. cardFlat is the no-chrome counterpart.
+// ─── Gradients — derived from PALETTE ─────────────────────────────────
+// Multi-stop linear gradients composed from the four brand accents.
+// Used as fills inside product geometry (waveform, illustrations) and
+// on the primary button. Never used as page-level background washes.
+const GRAD = {
+  signal:
+    `linear-gradient(135deg, ${PALETTE.cyan} 0%, ${PALETTE.blue} 35%, ${PALETTE.violet} 70%, ${PALETTE.pink} 100%)`,
+  cool:
+    `linear-gradient(135deg, ${PALETTE.cyan} 0%, ${PALETTE.blue} 60%, ${PALETTE.violet} 100%)`,
+  warm:
+    `linear-gradient(135deg, ${PALETTE.violet} 0%, ${PALETTE.pink} 100%)`,
+  // Vertical brand button gradient
+  button:
+    `linear-gradient(180deg, ${PALETTE.blue} 0%, ${PALETTE.blueDeep} 60%, ${PALETTE.blueDark} 100%)`,
+  // Translucent surfaces — for layered geometric blocks on light
+  surfaceLow:  "rgba(10,10,16,0.02)",
+  surfaceMid:  "rgba(10,10,16,0.035)",
+  surfaceHigh: "rgba(10,10,16,0.06)",
+  // Legacy halo names — kept so dead references don't break. Set to
+  // transparent so any lingering use renders nothing.
+  haloCyan:   "transparent",
+  haloViolet: "transparent",
+  haloPink:   "transparent",
+};
+
+// ─── Elevation — derived from PALETTE ─────────────────────────────────
+// On light, elevation = soft drop shadow + hairline ring. No glow.
 const E = {
-  card: "0 0 0 1px rgba(38,38,43,0.08)",
+  card: `0 0 0 1px ${PALETTE.ring}, 0 1px 2px rgba(10,10,16,0.04)`,
   cardElevated:
-    "0 1px 2px rgba(38,38,43,0.04), 0 6px 16px -8px rgba(38,38,43,0.10), 0 24px 48px -24px rgba(38,38,43,0.18), 0 0 0 1px rgba(38,38,43,0.04)",
+    `0 0 0 1px ${PALETTE.ring}, 0 1px 2px rgba(10,10,16,0.04), 0 8px 24px -12px rgba(10,10,16,0.10), 0 24px 48px -24px rgba(10,10,16,0.10)`,
   cardFlat: "none",
   buttonGhost:
-    "0 2px 4px -2px rgba(0,0,0,0.20), 0 0 0 1px rgba(38,38,43,0.08)",
-  buttonBrand: `inset 0 1px 0.5px rgba(255,255,255,0.13), 0 1px 1px rgba(17,31,91,0.20), 0 2px 4px -2px rgba(17,31,91,0.40), 0 1px 5px -2px rgba(17,31,91,0.40), 0 0 0 1px ${T.btnRing}`,
-  // Nav capsule keeps a faint shadow because it floats over scrolling
-  // content and needs the small lift so it reads as foreground UI.
+    `0 0 0 1px ${PALETTE.ringStrong}, inset 0 1px 0 rgba(255,255,255,0.6)`,
+  buttonBrand:
+    `inset 0 1px 0 rgba(255,255,255,0.25), 0 0 0 1px ${PALETTE.blueDark}, 0 4px 12px -4px rgba(59,130,246,0.30)`,
   navCapsule:
-    "0 0 0 1px rgba(38,38,43,0.08), 0 1px 1px 0 rgba(38,38,43,0.06), 0 2px 8px -4px rgba(38,38,43,0.10)",
-  ringOnly: "0 0 0 1px rgba(38,38,43,0.08)",
-  globe: "0 0 32px rgba(116,117,131,0.20)",
+    `0 0 0 1px ${PALETTE.ring}, inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 24px -12px rgba(10,10,16,0.08)`,
+  ringOnly: `0 0 0 1px ${PALETTE.ring}`,
+  innerGlow: "none",
 };
 
-// Dashed frame tokens — reusable design-system primitive for sections that
-// need a blueprint/architectural framing (pricing calculator, How it works,
-// modules grid). Stroke is soft enough to read as scaffold, not as a border.
+// Dashed frame tokens — page scaffold lines on light paper.
 const DASH = {
-  stroke: "#cdced3",      // ag-gray-300 muted
-  strokeStrong: "#b8b9c1", // ag-gray-300
-  // 4px dash, 6px gap — same rhythm AG uses
+  stroke: "rgba(10,10,16,0.10)",
+  strokeStrong: "rgba(10,10,16,0.18)",
   pattern: "4, 6",
-  // Outset (px) the frame extends past its container — gives the
-  // "drawn on the page" feeling instead of hugging the content.
   outset: 24,
 };
 
-// 3-stop gradient — osto's exact button gradient pattern.
-const BUTTON_BRAND_BG = `linear-gradient(${T.btnTop} 0%, ${T.accentDeep} 60%, ${T.btnRing} 100%)`;
+// Brand button background — the signature gradient used on the hero
+// primary CTA + Pricing tier "Start building" button.
+const BUTTON_BRAND_BG = GRAD.button;
 
 // ─── Spacing scale (4pt rhythm) ───────────────────────────────────────
 // Used by the components built on top of these tokens. Existing sections
@@ -103,10 +224,11 @@ const S = {
 };
 
 // ─── Radius scale ─────────────────────────────────────────────────────
+// All radii zeroed — the site is now sharp-cornered by design rule.
 const R = {
-  sm: 6,
-  md: 10,    // matches button radius
-  lg: 24,    // card radius (was rounded-3xl)
+  sm: 0,
+  md: 0,
+  lg: 0,
 };
 
 // ─── Type scale ───────────────────────────────────────────────────────
@@ -145,15 +267,18 @@ export function OstoHeroV2() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     // eslint-disable-next-line no-console
     console.log(
-      "%c osto %c security as the byproduct, not the goal. ",
-      "background:#1c267a;color:#fff;padding:4px 8px;border-radius:4px 0 0 4px;font-weight:600;letter-spacing:0.04em",
-      "background:#f7f7f8;color:#26262b;padding:4px 10px;border-radius:0 4px 4px 0;letter-spacing:-0.01em"
+      "%c Resonate %c voice API for real-time agents ",
+      `background:${PALETTE.blue};color:#ffffff;padding:4px 8px;font-weight:600;letter-spacing:0.04em`,
+      `background:${PALETTE.surface};color:${PALETTE.ink};padding:4px 10px;letter-spacing:-0.01em;border:1px solid ${PALETTE.ring};border-left:none`
     );
   }, []);
 
   return (
     <main
-      className="relative min-h-screen overflow-hidden"
+      // overflow-x-clip (not overflow-hidden) — clips horizontal overflow
+      // from full-bleed bands without creating a scroll container, which
+      // would break `position: sticky` for scroll-jacked sections inside.
+      className="relative min-h-screen overflow-x-clip"
       style={{
         background: T.page,
         color: T.ink,
@@ -168,7 +293,11 @@ export function OstoHeroV2() {
       <SectionSpacer />
       <Reveal><ProblemSection /></Reveal>
       <SectionSpacer />
-      <Reveal><HowItWorks /></Reveal>
+      {/* HowItWorks is NOT wrapped in <Reveal> — the Reveal component
+          applies a CSS transform which creates a containing block that
+          breaks `position: sticky` for descendants. The section has its
+          own scroll-driven fade-in on the inner panel. */}
+      <HowItWorks />
       <SectionSpacer />
       <Reveal><OstoModules /></Reveal>
       <SectionSpacer />
@@ -206,7 +335,8 @@ export function OstoHeroV2() {
 // it. Section content is capped at 1180px; rails sit 28px further out so
 // there's a visible gutter between the rail and any panel edge.
 const RAIL_INSET = "max(24px, calc((100vw - 1240px) / 2))";
-const RAIL_STROKE = "rgba(38,38,43,0.14)";
+const RAIL_STROKE = PALETTE.ring;        // derived from PALETTE — flips with theme
+const RAIL_TICK   = PALETTE.ringStrong;  // dashed tick fill for SectionSpacer
 
 function PageRails() {
   return (
@@ -278,7 +408,7 @@ function SectionSpacer({
         style={{
           left: RAIL_INSET,
           right: RAIL_INSET,
-          backgroundImage: `repeating-linear-gradient(to right, rgba(38,38,43,0.07) 0 1px, transparent 1px 11px)`,
+          backgroundImage: `repeating-linear-gradient(to right, ${RAIL_TICK} 0 1px, transparent 1px 11px)`,
           WebkitMaskImage:
             "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
           maskImage:
@@ -291,8 +421,32 @@ function SectionSpacer({
 
 type MenuKey = "platform" | "solutions";
 
+// Mobile menu items — flat list that mirrors what's in the desktop
+// mega-menus, minus the illustrations (which would crowd a phone sheet).
+const MOBILE_NAV_SECTIONS = [
+  {
+    heading: "Platform",
+    items: [
+      { label: "Realtime voice", desc: "90 ms streaming agents", href: "#" },
+      { label: "Voice library", desc: "200+ voices · 32 languages", href: "#" },
+      { label: "Telephony & SDKs", desc: "SIP, Twilio, WebRTC", href: "#" },
+      { label: "Evals & analytics", desc: "Transcripts and drop-off", href: "#" },
+    ],
+  },
+  {
+    heading: "Solutions",
+    items: [
+      { label: "Customer support", desc: "Inbound that resolves 70%", href: "#" },
+      { label: "Outbound sales", desc: "Qualify and book at scale", href: "#" },
+      { label: "Healthcare & ops", desc: "HIPAA BAA reminders, intake", href: "#" },
+      { label: "Receptionist", desc: "Always-on front desk", href: "#" },
+    ],
+  },
+] as const;
+
 function NavBar() {
   const [openMenu, setOpenMenu] = useState<null | MenuKey>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   // Delayed close so the cursor can travel from the trigger to the
   // panel across the small mt-3 gap without the menu snapping shut.
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -333,6 +487,21 @@ function NavBar() {
 
   useEffect(() => () => cancelClose(), []);
 
+  // Lock body scroll when the mobile sheet is open + close on Escape.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [mobileOpen]);
+
   return (
     <header
       data-osto-nav
@@ -340,22 +509,17 @@ function NavBar() {
     >
       <div className="relative mx-auto flex max-w-[940px] items-center justify-between gap-x-12">
         <nav
-          className="flex w-full items-center justify-between gap-x-12 rounded-2xl py-1.5 pl-5 pr-1.5 backdrop-blur transition-shadow duration-200"
+          className="flex w-full items-center justify-between gap-x-12 py-1.5 pl-5 pr-1.5 backdrop-blur transition-shadow duration-200"
           style={{
-            background: "rgba(247,247,248,0.90)",
+            background: "rgba(255,255,255,0.78)",
             boxShadow: E.navCapsule,
+            backdropFilter: "blur(14px) saturate(140%)",
+            WebkitBackdropFilter: "blur(14px) saturate(140%)",
           }}
         >
           <div className="flex items-center gap-x-5">
-            <Link href="/" aria-label="Osto home" className="flex items-center">
-              <Image
-                src="/osto-logo.png"
-                alt="Osto"
-                width={1163}
-                height={432}
-                priority
-                className="h-[18px] w-auto"
-              />
+            <Link href="/" aria-label="Resonate home" className="flex items-center">
+              <ResonateLogo size={18} />
             </Link>
 
             <div className="hidden items-center md:flex">
@@ -385,12 +549,54 @@ function NavBar() {
           <div className="flex items-center gap-x-1">
             <Link
               href="#"
-              className="hidden rounded-[10px] px-3 py-2 text-[13px] font-medium tracking-[-0.13px] md:inline-block"
+              className="hidden  px-3 py-2 text-[13px] font-medium tracking-[-0.13px] md:inline-block"
               style={{ color: T.ink }}
             >
               Sign in
             </Link>
             <BrandButton href="#">Book demo</BrandButton>
+
+            {/* Mobile-only menu trigger. Sits to the right of Book demo
+                so the brand button stays the visual anchor on phone. */}
+            <button
+              type="button"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              onClick={() => setMobileOpen((v) => !v)}
+              className="ml-1 inline-flex h-9 w-9 items-center justify-center md:hidden"
+              style={{ color: T.ink }}
+            >
+              {/* Two-line hamburger — collapses to an X when open. The
+                  rotation/translation is purely CSS, no extra DOM. */}
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden>
+                <line
+                  x1="3" x2="17"
+                  y1={mobileOpen ? 10 : 7}
+                  y2={mobileOpen ? 10 : 7}
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  style={{
+                    transformOrigin: "10px 10px",
+                    transform: mobileOpen ? "rotate(45deg)" : "none",
+                    transition: "transform 220ms cubic-bezier(0.2,0.8,0.2,1), y 220ms cubic-bezier(0.2,0.8,0.2,1)",
+                  }}
+                />
+                <line
+                  x1="3" x2="17"
+                  y1={mobileOpen ? 10 : 13}
+                  y2={mobileOpen ? 10 : 13}
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  style={{
+                    transformOrigin: "10px 10px",
+                    transform: mobileOpen ? "rotate(-45deg)" : "none",
+                    transition: "transform 220ms cubic-bezier(0.2,0.8,0.2,1), y 220ms cubic-bezier(0.2,0.8,0.2,1)",
+                  }}
+                />
+              </svg>
+            </button>
           </div>
         </nav>
 
@@ -403,43 +609,37 @@ function NavBar() {
             className="absolute left-0 top-full"
           >
             <MegaMenu
-              cards={[
+              items={[
                 {
-                  title: "Real-time security",
-                  desc: "Web, API, endpoint, and network protection live in hours.",
-                  illus: <IllusMegaShield />,
+                  icon: "stream",
+                  label: "Realtime voice",
+                  desc: "Streaming agents that answer in 90 ms and switch languages mid-call.",
+                  href: "#",
                 },
                 {
-                  title: "Cloud posture",
-                  desc: "Continuous scanning across AWS, Azure, and GCP.",
-                  illus: <IllusMegaCloud />,
+                  icon: "voice-library",
+                  label: "Voice library",
+                  desc: "Pick from 200+ voices across 32 languages, or clone your own.",
+                  href: "#",
                 },
                 {
-                  title: "Compliance & audits",
-                  desc: "SOC 2, ISO 27001, HIPAA, and GDPR readiness with live evidence.",
-                  illus: <IllusMegaCert />,
+                  icon: "telephony",
+                  label: "Telephony & SDKs",
+                  desc: "Reach callers over SIP, Twilio, WebRTC, iOS, and Android.",
+                  href: "#",
                 },
                 {
-                  title: "VAPT & questionnaires",
-                  desc: "OSCP-led testing and AI-assisted security responses.",
-                  illus: <IllusMegaCode />,
+                  icon: "evals",
+                  label: "Evals & analytics",
+                  desc: "Watch transcripts, sentiment, and drop-off in one dashboard.",
+                  href: "#",
                 },
               ]}
-              footer={{
-                icon: (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-                    <path
-                      d="M3 4h10v8H3z M3 4l5 4 5-4"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                ),
-                label: "Platform documentation",
-                caption: "Everything you need to integrate with Osto modules.",
-                cta: "Read docs",
+              preview={{
+                title: "Master every endpoint of Resonate",
+                desc: "Quickstart guides, SDK reference, and playbooks for shipping production voice agents.",
+                href: "#docs",
+                illus: <MegaPreviewPlatform />,
               }}
             />
           </div>
@@ -452,49 +652,194 @@ function NavBar() {
             className="absolute left-0 top-full"
           >
             <MegaMenu
-              cards={[
+              items={[
                 {
-                  title: "Seed to Series A",
-                  desc: "First security posture with controls live from day one.",
-                  illus: <IllusMegaScale />,
+                  icon: "support",
+                  label: "Customer support",
+                  desc: "Inbound that resolves 70% of tickets before a human picks up.",
+                  href: "#",
                 },
                 {
-                  title: "Series B and beyond",
-                  desc: "Enterprise deals plus audit-ready frameworks.",
-                  illus: <IllusMegaIndustry />,
+                  icon: "outbound",
+                  label: "Outbound sales",
+                  desc: "Qualify leads and book meetings without staffing a call center.",
+                  href: "#",
                 },
                 {
-                  title: "Investor security checklist",
-                  desc: "Term-sheet ready in days, not quarters.",
-                  illus: <IllusMegaHandshake />,
+                  icon: "healthcare",
+                  label: "Healthcare & ops",
+                  desc: "Run reminders, intake, and triage under a signed HIPAA BAA.",
+                  href: "#",
                 },
                 {
-                  title: "SOC 2 deadline",
-                  desc: "Type II readiness compressed into 118 days.",
-                  illus: <IllusMegaDeadline />,
+                  icon: "receptionist",
+                  label: "Receptionist",
+                  desc: "Front desk that routes, books, and answers in any language.",
+                  href: "#",
                 },
               ]}
-              footer={{
-                icon: (
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-                    <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
-                    <path
-                      d="M8 5v3l2 2"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                ),
-                label: "See customer stories",
-                caption: "How startups onboarded Osto on real timelines.",
-                cta: "View stories",
+              preview={{
+                title: "Voice agents shipped in days, not quarters",
+                desc: "Read how support, sales, and healthcare teams put Resonate agents on real phone numbers in production.",
+                href: "#customers",
+                illus: <MegaPreviewSolutions />,
               }}
             />
           </div>
         )}
       </div>
+
+      {/* Mobile sheet — full-viewport overlay, md:hidden. Slides in from
+          the top so the visual relationship to the nav capsule stays
+          intact. Body scroll lock and Escape handler live in the parent
+          NavBar effect. */}
+      <MobileNavSheet
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+      />
     </header>
+  );
+}
+
+// ─── Mobile nav sheet ─────────────────────────────────────────────────
+// Full-viewport drawer that opens from the top edge under the capsule.
+// Lists Platform + Solutions as flat sections with short descriptors,
+// then the secondary links (Pricing, Docs) and a Sign-in row.
+function MobileNavSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal={open}
+      aria-hidden={!open}
+      className="fixed inset-x-0 top-0 z-40 md:hidden"
+      style={{
+        // Sits below the nav capsule (which is z-50). Height auto-grows
+        // to fit content; max-height capped to viewport so very long
+        // lists scroll inside the sheet.
+        maxHeight: "100dvh",
+        background: T.surface,
+        boxShadow: `0 24px 48px -16px rgba(10,10,16,0.18)`,
+        // Slide + fade in from the top edge. Off-screen when closed.
+        transform: open ? "translateY(0)" : "translateY(-12px)",
+        opacity: open ? 1 : 0,
+        pointerEvents: open ? "auto" : "none",
+        transition:
+          "transform 260ms cubic-bezier(0.2,0.8,0.2,1), opacity 220ms ease-out",
+        // Leave room at the top for the nav capsule (top-4 = 16px +
+        // capsule height ~52px + a small buffer).
+        paddingTop: 84,
+        paddingBottom: 28,
+        paddingInline: 20,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
+      {MOBILE_NAV_SECTIONS.map((section) => (
+        <div key={section.heading} className="mb-6">
+          <p
+            className="px-2 text-[12px] font-medium"
+            style={{
+              color: T.inkSubtle,
+              fontFamily: T.fontMono,
+              letterSpacing: "0.04em",
+            }}
+          >
+            {section.heading}
+          </p>
+          <ul className="mt-2 flex flex-col">
+            {section.items.map((item) => (
+              <li key={item.label}>
+                <Link
+                  href={item.href}
+                  onClick={onClose}
+                  className="flex flex-col gap-y-1 px-2 py-3 active:bg-black/[0.04]"
+                  style={{ color: T.ink }}
+                >
+                  <span
+                    className="text-[15px] font-medium"
+                    style={{ letterSpacing: "-0.012em" }}
+                  >
+                    {item.label}
+                  </span>
+                  <span
+                    className="text-[13px]"
+                    style={{
+                      color: T.inkMid,
+                      letterSpacing: "-0.012em",
+                    }}
+                  >
+                    {item.desc}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+
+      {/* Secondary links + sign-in. Stacked as a quiet row beneath the
+          two sections. */}
+      <div
+        className="mt-2 flex flex-col"
+        style={{ borderTop: `1px solid ${T.ring}` }}
+      >
+        <Link
+          href="#pricing"
+          onClick={onClose}
+          className="flex items-center justify-between px-2 py-4 active:bg-black/[0.04]"
+          style={{ color: T.ink }}
+        >
+          <span className="text-[15px] font-medium" style={{ letterSpacing: "-0.012em" }}>
+            Pricing
+          </span>
+          <NavChevron />
+        </Link>
+        <Link
+          href="#docs"
+          onClick={onClose}
+          className="flex items-center justify-between px-2 py-4 active:bg-black/[0.04]"
+          style={{ color: T.ink, borderTop: `1px solid ${T.ring}` }}
+        >
+          <span className="text-[15px] font-medium" style={{ letterSpacing: "-0.012em" }}>
+            Docs
+          </span>
+          <NavChevron />
+        </Link>
+        <Link
+          href="#"
+          onClick={onClose}
+          className="flex items-center justify-between px-2 py-4 active:bg-black/[0.04]"
+          style={{ color: T.ink, borderTop: `1px solid ${T.ring}` }}
+        >
+          <span className="text-[15px] font-medium" style={{ letterSpacing: "-0.012em" }}>
+            Sign in
+          </span>
+          <NavChevron />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// Tiny right-chevron used as the trailing affordance on mobile rows.
+function NavChevron() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <path
+        d="M4 2 L8 6 L4 10"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.5"
+      />
+    </svg>
   );
 }
 
@@ -518,7 +863,7 @@ function NavTrigger({
       onFocus={onOpen}
       onClick={onToggle}
       aria-expanded={open}
-      className="inline-flex items-center gap-x-2 rounded-[10px] px-3 py-2 text-[13px] font-medium tracking-[-0.13px] transition-colors hover:bg-black/[0.04]"
+      className="inline-flex items-center gap-x-2 px-3 py-2 text-[13px] font-medium tracking-[-0.13px] transition-colors hover:bg-black/[0.04]"
       style={{ color: T.ink }}
     >
       {label}
@@ -547,11 +892,13 @@ function NavTrigger({
 }
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  // Hover style matches NavTrigger: a faint dark tint background, no
+  // underline. Same px/py, same transition, so all four top-nav items
+  // (Platform, Solutions, Pricing, Docs) behave identically.
   return (
     <Link
       href={href}
-      data-osto-nav-link
-      className="rounded-[10px] px-2 py-2 text-[13px] font-medium tracking-[-0.13px]"
+      className="inline-flex items-center px-3 py-2 text-[13px] font-medium tracking-[-0.13px] transition-colors hover:bg-black/[0.04]"
       style={{ color: T.ink }}
     >
       {children}
@@ -559,356 +906,468 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   );
 }
 
-/**
- * MegaMenu — large illustrated dropdown panel.
- *
- * Pattern: 2×2 grid of MegaCard (each with title, caption, line-art
- * illustration), plus a MegaFooter strip with icon + label + CTA button.
- * Matches the AccessGrid mega-menu treatment.
- */
+// ─── Mega-menu — Twenty-style two-column dropdown ─────────────────────
+//
+// Left column: a vertical list of 4 menu items. Each row = small icon
+// tile, an uppercase mono label, and a one-line descriptor underneath.
+// Right column: a single clickable "feature preview" card with a small
+// product-UI illustration, a heading, and a short caption.
+//
+// Both halves are clickable links — left rows go to their feature page,
+// the right preview goes to docs (Platform) or customer stories
+// (Solutions). The whole panel matches the nav capsule's max-width
+// (940px) so it tucks neatly under the nav.
+
+type MegaIconKey =
+  | "stream"
+  | "voice-library"
+  | "telephony"
+  | "evals"
+  | "support"
+  | "outbound"
+  | "healthcare"
+  | "receptionist";
+
+type MegaItem = {
+  icon: MegaIconKey;
+  label: string;
+  desc: string;
+  href: string;
+};
+
+type MegaPreview = {
+  /** Title shown beneath the preview illustration */
+  title: string;
+  /** Caption shown beneath the title */
+  desc: string;
+  /** Where the whole preview card links to */
+  href: string;
+  /** Preview illustration — a small product UI fragment */
+  illus: React.ReactNode;
+};
+
 function MegaMenu({
-  cards,
-  footer,
+  items,
+  preview,
 }: {
-  cards: {
-    title: string;
-    desc: string;
-    illus: React.ReactNode;
-  }[];
-  footer: { icon: React.ReactNode; label: string; caption: string; cta: string };
+  items: MegaItem[];
+  preview: MegaPreview;
 }) {
   return (
     <div
       data-osto-mega
       role="menu"
-      className="mt-3 overflow-hidden rounded-2xl"
+      className="mt-3 overflow-hidden"
       style={{
         background: T.surface,
         boxShadow: E.card,
-        width: "min(640px, calc(100vw - 32px))",
+        // Same envelope as the nav capsule above it.
+        width: "min(940px, calc(100vw - 32px))",
       }}
     >
-      {/* 2×2 illustrated card grid */}
-      <div className="grid grid-cols-2">
-        {cards.map((c, i) => {
-          const right = i % 2 === 0;
-          const bottom = i < cards.length - 2;
-          return (
-            <Link
-              key={c.title}
-              href="#"
-              className="group relative flex h-[200px] flex-col justify-end p-5 transition-colors hover:bg-black/[0.015]"
-              style={{
-                boxShadow: [
-                  right ? `inset -0.5px 0 0 0 ${T.ring}` : "",
-                  bottom ? `inset 0 -0.5px 0 0 ${T.ring}` : "",
-                ]
-                  .filter(Boolean)
-                  .join(", "),
-              }}
-            >
-              {/* Illustration sits absolutely in the upper portion */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 flex h-[110px] items-center justify-center">
-                {c.illus}
-              </div>
-              <div className="relative">
-                <p
-                  className="text-[14px] font-medium"
-                  style={{
-                    color: T.ink,
-                    fontFamily: T.fontDisplay,
-                    letterSpacing: "-0.21px",
-                  }}
-                >
-                  {c.title}
-                </p>
-                <p
-                  className="mt-1 text-[12px] leading-[18px]"
-                  style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
-                >
-                  {c.desc}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+        {/* ── Left column — vertical list of feature items ── */}
+        <ul
+          className="flex flex-col"
+          style={{ background: T.surface }}
+        >
+          {items.map((item) => (
+            <li key={item.label}>
+              <Link
+                href={item.href}
+                className="group flex items-start gap-x-3.5 px-5 py-4 transition-colors hover:bg-black/[0.03]"
+              >
+                <MegaIcon kind={item.icon} />
+                <div className="min-w-0">
+                  <p
+                    className="text-[11px] font-medium uppercase"
+                    style={{
+                      color: T.inkMid,
+                      fontFamily: T.fontMono,
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    {item.label}
+                  </p>
+                  <p
+                    className="mt-1 text-pretty text-[13px] leading-[18px]"
+                    style={{ color: T.ink, letterSpacing: "-0.012em" }}
+                  >
+                    {item.desc}
+                  </p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
 
-      {/* Footer CTA strip */}
-      <div
-        className="flex items-center justify-between gap-x-4 px-5 py-3.5"
-        style={{
-          background: T.panel,
-          boxShadow: `inset 0 0.5px 0 0 ${T.ring}`,
-        }}
-      >
-        <div className="flex items-center gap-x-3">
-          <span
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{
-              background: T.surface,
-              boxShadow: E.ringOnly,
-              color: T.inkSoft,
-            }}
+        {/* ── Right column — clickable feature preview ── */}
+        <Link
+          href={preview.href}
+          className="group flex flex-col p-5 transition-colors hover:bg-black/[0.03]"
+          style={{
+            background: T.panel,
+            boxShadow: `inset 1px 0 0 0 ${T.ring}`,
+          }}
+        >
+          {/* Preview illustration — fills the upper portion of the card */}
+          <div
+            className="relative h-[180px] w-full overflow-hidden"
+            style={{ background: T.surface, boxShadow: E.ringOnly }}
           >
-            {footer.icon}
-          </span>
-          <div>
+            {preview.illus}
+          </div>
+          {/* Title + caption beneath the preview */}
+          <div className="mt-4">
             <p
-              className="text-[13px] font-medium"
-              style={{ color: T.ink, letterSpacing: "-0.13px" }}
+              className="text-[14px] font-semibold"
+              style={{ color: T.ink, letterSpacing: "-0.012em" }}
             >
-              {footer.label}
+              {preview.title}
             </p>
             <p
-              className="text-[12px]"
-              style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
+              className="mt-1 text-pretty text-[12.5px] leading-[18px]"
+              style={{ color: T.inkSoft, letterSpacing: "-0.012em" }}
             >
-              {footer.caption}
+              {preview.desc}
             </p>
           </div>
-        </div>
-        <GhostButton href="#" withCaret>
-          {footer.cta}
-        </GhostButton>
+        </Link>
       </div>
     </div>
   );
 }
 
-// ─── Mega-menu illustrations — Attio-style wireframe isometric drawings.
-// 1px ink stroke on white, dashed lines for hidden edges. No fill except
-// pure white. No brand color anywhere — these are architectural diagrams.
-
-const MEGA_STROKE = T.inkSubtle;
-const MEGA_HIDDEN = T.inkFaint;
-
-function IllusMegaShield() {
-  // Wireframe shield with dashed back face
-  return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-        <path d="M60 18 L46 24" />
-        <path d="M46 24 L46 50" />
-      </g>
-      <path
-        d="M60 18 L78 26 L78 50 Q78 66 60 74 Q42 66 42 50 L42 26 L60 18 Z"
-        fill="white"
-        stroke={MEGA_STROKE}
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <path d="M52 46 L58 52 L70 40" fill="none" stroke={MEGA_STROKE} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+// ─── MegaIcon — small light tile with a thin-line glyph + blue accent ─
+//
+// Twenty/Stripe-style icon set. Every icon is a 36×36 sharp-cornered
+// tile in white, with a layered shadow stack that gives it depth:
+//   • inset top-highlight (subtle white-on-white gleam at the top edge)
+//   • hairline ring at ~8% black (the visible card border)
+//   • soft offset drop shadow underneath (1px down, 2px blur)
+// Glyph is drawn in dark ink with one element in brand-blue as the
+// focal accent. Matches the reference's "card raised on the surface"
+// feel rather than the previous "black sticker" treatment.
+function MegaIcon({ kind }: { kind: MegaIconKey }) {
+  // Shared icon scaffold: light filled tile + layered shadow + thin
+  // dark glyph layer.
+  const TileWrap = ({ children }: { children: React.ReactNode }) => (
+    <span
+      aria-hidden
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center"
+      style={{
+        background: T.surface,
+        boxShadow: [
+          // Inset top-edge highlight — a sliver of brighter white that
+          // catches the "light" and makes the tile read as raised.
+          "inset 0 1px 0 rgba(255,255,255,0.9)",
+          // Hairline ring — the visible card border.
+          `0 0 0 1px ${T.ring}`,
+          // Soft drop shadow — sits the tile gently on the surface.
+          "0 1px 2px rgba(10,10,16,0.06)",
+          "0 2px 6px -2px rgba(10,10,16,0.08)",
+        ].join(", "),
+      }}
+    >
+      {children}
+    </span>
   );
+  // Glyph colors — dark for the body of the glyph, brand-blue for the
+  // accent piece. ~80% alpha on ink so the glyph reads as a "thin-line
+  // graphite" mark rather than full-saturation black.
+  const FG = "rgba(10,10,16,0.78)";
+  const ACC = T.accent;
+
+  switch (kind) {
+    // ── PLATFORM ──
+    // Streaming voice → audio waveform with one taller bar in accent.
+    case "stream":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <line x1="3"  y1="9" x2="3"  y2="9"  stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="6"  y1="6" x2="6"  y2="12" stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="9"  y1="3" x2="9"  y2="15" stroke={ACC} strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="12" y1="5" x2="12" y2="13" stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="15" y1="7" x2="15" y2="11" stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </TileWrap>
+      );
+
+    // Voice library → stack of 3 horizontal rows with the top row in accent.
+    case "voice-library":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="3"   y="3.5" width="12" height="3" stroke={ACC} strokeWidth="1.4" />
+            <rect x="3"   y="7.5" width="12" height="3" stroke={FG}  strokeWidth="1.4" />
+            <rect x="3"   y="11.5" width="12" height="3" stroke={FG}  strokeWidth="1.4" />
+            <circle cx="5.5" cy="5"  r="0.7" fill={ACC} />
+            <circle cx="5.5" cy="9"  r="0.7" fill={FG}  />
+            <circle cx="5.5" cy="13" r="0.7" fill={FG}  />
+          </svg>
+        </TileWrap>
+      );
+
+    // Telephony → handset glyph with accent signal arc.
+    case "telephony":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M4 4 L 7 4 L 8 7 L 6.5 8.5 Q 8.5 11.5 11 13 L 12 11.5 L 15 12 L 15 15 Q 9 15 4 10 Z"
+              stroke={FG}
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <path d="M11 5 Q 13 5 13 7"  stroke={ACC} strokeWidth="1.4" strokeLinecap="round" fill="none" />
+            <path d="M11 3 Q 15 3 15 7"  stroke={ACC} strokeWidth="1.4" strokeLinecap="round" fill="none" opacity="0.6" />
+          </svg>
+        </TileWrap>
+      );
+
+    // Evals → line chart with one peak dot in accent.
+    case "evals":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <polyline
+              points="3,12 6,10 9,11 12,5 15,7"
+              fill="none"
+              stroke={FG}
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            <line x1="3" y1="14.5" x2="15" y2="14.5" stroke={FG} strokeWidth="1" strokeDasharray="1.5 1.5" opacity="0.4" />
+            <circle cx="12" cy="5" r="1.6" fill={ACC} />
+          </svg>
+        </TileWrap>
+      );
+
+    // ── SOLUTIONS ──
+    // Customer support → two speech bubbles, the smaller one in accent.
+    case "support":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M3 4 H 13 V 9 H 6 L 4 11 V 9 H 3 Z"
+              stroke={FG}
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            <path
+              d="M8 12 H 15 V 15 H 12 L 11 16 V 15 H 8 Z"
+              fill={ACC}
+              stroke="none"
+            />
+          </svg>
+        </TileWrap>
+      );
+
+    // Outbound → a contact row with an arrow pointing right (accent).
+    case "outbound":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="6" cy="6" r="2" stroke={FG} strokeWidth="1.4" />
+            <path d="M2.5 14 Q 2.5 10 6 10 Q 9.5 10 9.5 14" stroke={FG} strokeWidth="1.4" strokeLinecap="round" fill="none" />
+            <line x1="11" y1="9" x2="15.5" y2="9" stroke={ACC} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M14 7 L 15.5 9 L 14 11" stroke={ACC} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+        </TileWrap>
+      );
+
+    // Healthcare → clipboard with a checkmark in accent.
+    case "healthcare":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="4" y="4" width="10" height="11" stroke={FG} strokeWidth="1.4" />
+            <rect x="6.5" y="2.5" width="5" height="2.5" fill={FG} />
+            <path d="M6 10 L 8 12 L 12 8" stroke={ACC} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+        </TileWrap>
+      );
+
+    // Receptionist → bell with accent ringer dot.
+    case "receptionist":
+      return (
+        <TileWrap>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M4 12 Q 4 6 9 6 Q 14 6 14 12 Z"
+              stroke={FG}
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+              fill="none"
+            />
+            <line x1="3" y1="12.5" x2="15" y2="12.5" stroke={FG} strokeWidth="1.4" strokeLinecap="round" />
+            <line x1="9" y1="4" x2="9" y2="6" stroke={FG} strokeWidth="1.4" strokeLinecap="round" />
+            <circle cx="9" cy="15" r="1.1" fill={ACC} />
+          </svg>
+        </TileWrap>
+      );
+  }
 }
 
-function IllusMegaCloud() {
-  // Three iso wireframe cubes — clouds as 3D objects
+// ─── Mega-menu preview illustrations ──────────────────────────────────
+//
+// The right-side card in each mega-menu uses one of these. They are
+// small product-UI fragments rendered as a single SVG, scaled to fill
+// a 180px-tall canvas. Same mono-blue + gray vocabulary as the bento.
+function MegaPreviewPlatform() {
+  // Stylized docs page: a left sidebar of nav rows + a content column
+  // with a heading bar and a few text rows. The active sidebar row is
+  // brand-blue. Reads as "what the developer docs look like."
   return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g transform="translate(8 14)">
-        <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-          <path d="M8 12 L16 8 M8 12 L8 24 M8 12 L24 12" />
-        </g>
-        <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-          <path d="M16 8 L24 12 L24 24 L16 28 L8 24 L8 12 L16 8 Z" />
-          <path d="M16 8 L16 20 M16 20 L24 24 M16 20 L8 24" stroke={MEGA_STROKE} fill="none" />
-        </g>
-      </g>
-      <g transform="translate(44 22)">
-        <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-          <path d="M8 12 L16 8 M8 12 L8 24 M8 12 L24 12" />
-        </g>
-        <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-          <path d="M16 8 L24 12 L24 24 L16 28 L8 24 L8 12 L16 8 Z" />
-          <path d="M16 8 L16 20 M16 20 L24 24 M16 20 L8 24" stroke={MEGA_STROKE} fill="none" />
-        </g>
-      </g>
-      <g transform="translate(80 14)">
-        <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-          <path d="M8 12 L16 8 M8 12 L8 24 M8 12 L24 12" />
-        </g>
-        <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-          <path d="M16 8 L24 12 L24 24 L16 28 L8 24 L8 12 L16 8 Z" />
-          <path d="M16 8 L16 20 M16 20 L24 24 M16 20 L8 24" stroke={MEGA_STROKE} fill="none" />
-        </g>
-      </g>
-    </svg>
-  );
-}
+    <svg
+      viewBox="0 0 360 180"
+      width="100%"
+      height="100%"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden
+    >
+      {/* Outer page chrome */}
+      <rect x="14" y="14" width="332" height="152" fill={T.surface} stroke={T.ring} />
+      {/* Top bar */}
+      <rect x="14" y="14" width="332" height="22" fill={T.panel} />
+      <line x1="14" y1="36" x2="346" y2="36" stroke={T.ring} />
+      {/* Window dots */}
+      <circle cx="26" cy="25" r="2.5" fill={T.inkFaint} />
+      <circle cx="36" cy="25" r="2.5" fill={T.inkFaint} />
+      <circle cx="46" cy="25" r="2.5" fill={T.inkFaint} />
 
-function IllusMegaCert() {
-  // Wireframe document slab with corner ribbon
-  return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-        <path d="M44 18 L36 22" />
-        <path d="M36 22 L36 70" />
-      </g>
-      <path
-        d="M44 18 L84 18 L84 66 L52 66 L36 70 L36 22 L44 18 Z"
-        fill="white"
-        stroke={MEGA_STROKE}
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      <line x1="48" y1="30" x2="78" y2="30" stroke={MEGA_HIDDEN} strokeWidth="1" />
-      <line x1="48" y1="38" x2="74" y2="38" stroke={MEGA_HIDDEN} strokeWidth="1" />
-      <line x1="48" y1="46" x2="70" y2="46" stroke={MEGA_HIDDEN} strokeWidth="1" />
-      {/* corner check badge */}
-      <circle cx="76" cy="56" r="6" fill="white" stroke={MEGA_STROKE} strokeWidth="1.2" />
-      <path d="M73 56 L75 58 L79 54" fill="none" stroke={MEGA_STROKE} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IllusMegaCode() {
-  // Wireframe pyramid (test pyramid metaphor) with dashed back face
-  return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-        <path d="M60 14 L36 64" />
-        <path d="M60 14 L60 64" />
-      </g>
-      <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-        <path d="M60 14 L92 64 L36 64 Z" />
-        <path d="M60 14 L84 64" />
-        <path d="M60 14 L48 64" />
-        <line x1="42" y1="54" x2="86" y2="54" stroke={MEGA_HIDDEN} />
-        <line x1="50" y1="34" x2="74" y2="34" stroke={MEGA_HIDDEN} />
-      </g>
-    </svg>
-  );
-}
-
-function IllusMegaScale() {
-  // Wireframe iso steps — growth in 3D
-  return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-        <path d="M22 60 L30 56" />
-        <path d="M22 60 L22 64" />
-      </g>
-      {/* 4 iso stairs */}
-      {[0, 1, 2, 3].map((i) => {
-        const x = 22 + i * 18;
-        const y = 60 - i * 8;
+      {/* Left sidebar */}
+      <rect x="14" y="36" width="92" height="130" fill={T.panel} />
+      <line x1="106" y1="36" x2="106" y2="166" stroke={T.ring} />
+      {/* Sidebar items */}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const y = 50 + i * 18;
+        const isActive = i === 1;
         return (
-          <g key={i} stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-            <path d={`M${x} ${y} L${x + 16} ${y} L${x + 24} ${y - 4} L${x + 8} ${y - 4} Z`} />
-            <path d={`M${x + 16} ${y} L${x + 16} ${y + 8} L${x + 24} ${y + 4} L${x + 24} ${y - 4}`} />
-            <path d={`M${x} ${y} L${x} ${y + 8} L${x + 16} ${y + 8}`} />
+          <g key={i}>
+            {isActive && (
+              <rect x="22" y={y - 5} width="76" height="14" fill={T.accent} />
+            )}
+            <rect
+              x={28}
+              y={y - 1}
+              width={i % 2 === 0 ? 56 : 64}
+              height="3"
+              fill={isActive ? "#ffffff" : T.inkMid}
+              opacity={isActive ? 0.95 : 0.7}
+            />
           </g>
         );
       })}
+
+      {/* Content column — heading + body rows */}
+      <g>
+        <rect x="124" y="48"  width="120" height="6" fill={T.ink} opacity="0.85" />
+        <rect x="124" y="62"  width="180" height="3" fill={T.inkMid} opacity="0.55" />
+        <rect x="124" y="70"  width="160" height="3" fill={T.inkMid} opacity="0.55" />
+        <rect x="124" y="78"  width="200" height="3" fill={T.inkMid} opacity="0.55" />
+        {/* Code block */}
+        <rect x="124" y="92"  width="208" height="48" fill={T.panel} stroke={T.ring} />
+        <rect x="132" y="100" width="56"  height="3" fill={T.accent} />
+        <rect x="192" y="100" width="80"  height="3" fill={T.inkMid} opacity="0.6" />
+        <rect x="132" y="110" width="48"  height="3" fill={T.inkMid} opacity="0.55" />
+        <rect x="132" y="120" width="120" height="3" fill={T.inkMid} opacity="0.55" />
+        <rect x="132" y="130" width="36"  height="3" fill={T.accent} />
+        {/* Footer row */}
+        <rect x="124" y="150" width="60"  height="3" fill={T.inkMid} opacity="0.5" />
+      </g>
     </svg>
   );
 }
 
-function IllusMegaDeadline() {
-  // Wireframe iso calendar slab
+function MegaPreviewSolutions() {
+  // Stylized customer-stories grid: 4 cards in a 2×2 with a small
+  // avatar tile, a name bar, a quote bar, and one card highlighted in
+  // brand-blue. Reads as "what the customer wall looks like."
   return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-        <path d="M28 22 L36 18" />
-        <path d="M28 22 L28 60" />
-      </g>
-      <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-        {/* calendar top face */}
-        <path d="M36 18 L84 18 L92 22 L44 22 Z" />
-        {/* front face */}
-        <path d="M44 22 L92 22 L92 60 L44 60 Z" />
-        {/* side face */}
-        <path d="M44 22 L36 18 L36 56 L44 60 Z" />
-      </g>
-      <line x1="48" y1="32" x2="88" y2="32" stroke={MEGA_HIDDEN} strokeWidth="1" />
-      {/* date dots */}
-      {[0, 1, 2].map((row) =>
-        [0, 1, 2, 3].map((col) => (
-          <circle
-            key={`${row}-${col}`}
-            cx={52 + col * 10}
-            cy={40 + row * 7}
-            r="1.4"
-            fill={MEGA_HIDDEN}
+    <svg
+      viewBox="0 0 360 180"
+      width="100%"
+      height="100%"
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden
+    >
+      <rect x="14" y="14" width="332" height="152" fill={T.surface} stroke={T.ring} />
+      {/* Heading bar at top */}
+      <rect x="28" y="30" width="160" height="5" fill={T.ink} opacity="0.85" />
+      <rect x="28" y="42" width="120" height="3" fill={T.inkMid} opacity="0.55" />
+
+      {/* 4 customer cards in a 2×2 */}
+      {[
+        { x: 28,  y: 64, accent: false },
+        { x: 192, y: 64, accent: true  },
+        { x: 28,  y: 118, accent: false },
+        { x: 192, y: 118, accent: false },
+      ].map((c, i) => (
+        <g key={i}>
+          <rect
+            x={c.x}
+            y={c.y}
+            width="140"
+            height="46"
+            fill={c.accent ? T.accent : T.panel}
+            stroke={c.accent ? "none" : T.ring}
           />
-        ))
-      )}
-      {/* circled date */}
-      <circle cx="72" cy="47" r="5" fill="none" stroke={MEGA_STROKE} strokeWidth="1.4" />
-    </svg>
-  );
-}
-
-function IllusMegaHandshake() {
-  // Two interlocking iso cubes — partnership
-  return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      <g transform="translate(20 22)">
-        <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-          <path d="M8 14 L18 8" />
-          <path d="M8 14 L8 30" />
+          {/* Avatar */}
+          <rect
+            x={c.x + 8}
+            y={c.y + 8}
+            width="14"
+            height="14"
+            fill={c.accent ? "rgba(255,255,255,0.32)" : T.inkFaint}
+          />
+          {/* Name */}
+          <rect
+            x={c.x + 28}
+            y={c.y + 10}
+            width="50"
+            height="3"
+            fill={c.accent ? "#ffffff" : T.ink}
+            opacity={c.accent ? 0.95 : 0.85}
+          />
+          {/* Role */}
+          <rect
+            x={c.x + 28}
+            y={c.y + 17}
+            width="36"
+            height="2.5"
+            fill={c.accent ? "rgba(255,255,255,0.7)" : T.inkMid}
+            opacity={c.accent ? 1 : 0.6}
+          />
+          {/* Quote lines */}
+          <rect
+            x={c.x + 8}
+            y={c.y + 30}
+            width="120"
+            height="2.5"
+            fill={c.accent ? "rgba(255,255,255,0.78)" : T.inkMid}
+            opacity={c.accent ? 1 : 0.5}
+          />
+          <rect
+            x={c.x + 8}
+            y={c.y + 37}
+            width="90"
+            height="2.5"
+            fill={c.accent ? "rgba(255,255,255,0.78)" : T.inkMid}
+            opacity={c.accent ? 1 : 0.5}
+          />
         </g>
-        <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-          <path d="M18 8 L28 14 L28 30 L18 36 L8 30 L8 14 L18 8 Z" />
-          <path d="M18 8 L18 24 M18 24 L28 30 M18 24 L8 30" stroke={MEGA_STROKE} fill="none" />
-        </g>
-      </g>
-      <g transform="translate(58 22)">
-        <g stroke={MEGA_HIDDEN} strokeWidth="1" strokeDasharray="2 2" fill="none">
-          <path d="M8 14 L18 8" />
-          <path d="M8 14 L8 30" />
-        </g>
-        <g stroke={MEGA_STROKE} strokeWidth="1.2" fill="white" strokeLinejoin="round">
-          <path d="M18 8 L28 14 L28 30 L18 36 L8 30 L8 14 L18 8 Z" />
-          <path d="M18 8 L18 24 M18 24 L28 30 M18 24 L8 30" stroke={MEGA_STROKE} fill="none" />
-        </g>
-      </g>
-    </svg>
-  );
-}
-
-function IllusMegaIndustry() {
-  // Five hexagons in perspective — Attio's signature stages illustration
-  return (
-    <svg viewBox="0 0 120 80" width="120" height="80" aria-hidden>
-      {[20, 40, 60, 80, 100].map((cx, i) => {
-        const s = 12 - i * 0.4;
-        const points = [
-          [cx, 40 - s],
-          [cx + s * 0.866, 40 - s * 0.5],
-          [cx + s * 0.866, 40 + s * 0.5],
-          [cx, 40 + s],
-          [cx - s * 0.866, 40 + s * 0.5],
-          [cx - s * 0.866, 40 - s * 0.5],
-        ];
-        return (
-          <g key={cx}>
-            <polygon
-              points={points.map((p) => p.join(",")).join(" ")}
-              fill="white"
-              stroke={MEGA_STROKE}
-              strokeWidth="1"
-            />
-            <line
-              x1={cx - s * 0.866 * 0.5}
-              y1={40 - s * 0.5 * 0.5}
-              x2={cx + s * 0.866 * 0.5}
-              y2={40 + s * 0.5 * 0.5}
-              stroke={MEGA_HIDDEN}
-              strokeWidth="1"
-              strokeDasharray="1.5 2"
-            />
-          </g>
-        );
-      })}
+      ))}
     </svg>
   );
 }
 
 // ─── Buttons ──────────────────────────────────────────────────────────
-// ─── Buttons ───────────────────────────────────────────────────────────
 // Two visual variants (brand / ghost), two sizes (sm / md). Size sm
 // matches the dense in-product feel used throughout the page. Size md
 // scales for the hero CTA where the headline is 56px.
@@ -933,7 +1392,7 @@ function BrandButton({
     <Link
       href={href}
       data-osto-brand-btn
-      className="inline-flex items-center text-white"
+      className="inline-flex items-center justify-center text-white"
       style={{
         ...s.type,
         background: BUTTON_BRAND_BG,
@@ -966,7 +1425,7 @@ function GhostButton({
     <Link
       href={href}
       data-osto-ghost-btn
-      className="inline-flex items-center"
+      className="inline-flex items-center justify-center"
       style={{
         ...s.type,
         background: T.surface,
@@ -1006,89 +1465,217 @@ function GhostButton({
 function Hero() {
   return (
     <section
-      className="relative px-6"
-      style={{ paddingTop: "clamp(96px, 14vw, 168px)" }}
+      className="relative px-5 sm:px-6"
+      style={{ paddingTop: "clamp(96px, 16vw, 200px)" }}
     >
-      <div className="mx-auto max-w-[820px] text-center">
-        <EyebrowPill>SOC 2 · ISO 27001 · HIPAA · GDPR</EyebrowPill>
+      {/* Hero is intentionally quiet — page rails and the section's own
+          dashed-grid frame provide all the structure. No ambient glow. */}
 
-        {/* Eyebrow → H1 is a tight pairing (12px). The previous 20px gap
-            visually orphaned the eyebrow from the headline. */}
+      <div className="relative mx-auto max-w-[960px] text-center">
         <h1
           className="text-balance"
           style={{
             fontFamily: T.fontDisplay,
             fontWeight: 500,
             color: T.ink,
-            fontSize: "clamp(40px, 6vw, 56px)",
-            lineHeight: 1.05,
-            letterSpacing: "-0.022em",
-            marginTop: S.sm,
+            // Fluid display scale.
+            //   • Phone (≤375): 38px — readable + still feels editorial
+            //   • Wide phone / tablet: scales smoothly via 9vw
+            //   • Desktop ceiling: 80px (Geist gets dense at larger sizes)
+            fontSize: "clamp(38px, 9vw, 80px)",
+            lineHeight: 1.04,
+            letterSpacing: "-0.035em",
             marginInline: "auto",
-            maxWidth: 760,
+            maxWidth: 920,
           }}
         >
-          Compliance is the byproduct of security.{" "}
-          <span style={{ color: T.accent }}>We fix both.</span>
+          The voice API for{" "}
+          <span style={{ color: T.accent, whiteSpace: "nowrap" }}>real&#8209;time</span>{" "}
+          agents.
         </h1>
 
-        {/* H1 → lead has more air (24px). Lead is one focused sentence;
-            the price/timeline pitch moved to the trust line below. */}
+        {/* H1 → lead — 28px of air. Lead is one focused sentence; the
+            money/timeline pitch moved to the trust line below. Slightly
+            larger than before (17–20px) for more presence under the H1. */}
         <p
           className="mx-auto text-pretty"
           style={{
-            color: T.inkStrong,
-            fontSize: "clamp(16px, 1.4vw, 18px)",
-            lineHeight: 1.45,
+            color: T.inkSoft,
+            fontSize: "clamp(17px, 1.5vw, 20px)",
+            lineHeight: 1.5,
             letterSpacing: "-0.012em",
-            marginTop: S.lg,
-            maxWidth: 560,
+            marginTop: 28,
+            maxWidth: 580,
           }}
         >
-          One platform for cloud, app, endpoint, and network security with
-          built-in compliance, VAPT, and questionnaires.
+          Streaming speech, function calling, and telephony in one SDK.
+          Your agent answers in 90&nbsp;ms and switches languages&nbsp;mid-call.
         </p>
 
-        {/* Lead → CTAs has the most air (40px). Gives the buttons
-            their own visual zone and lets them carry weight.
-            Wraps to a column on narrow screens so two md buttons
-            don't overflow at 320px. */}
+        {/* Lead → CTAs: 40px. On phone the two buttons stack and run
+            edge-to-edge inside the section padding so each one is a
+            full-width tap target. Above sm they collapse back to an
+            inline pair. */}
         <div
-          className="flex flex-col items-center justify-center sm:flex-row"
-          style={{ marginTop: S.xxl, gap: S.sm }}
+          className="flex flex-col items-stretch justify-center sm:flex-row sm:items-center"
+          style={{ marginTop: 40, gap: S.sm }}
         >
-          <BrandButton href="#" size="md">Book a 30-min demo</BrandButton>
+          <BrandButton href="#" size="md">Try a live agent</BrandButton>
           <GhostButton href="#" size="md" withCaret>
-            Start 7-day free trial
+            Get an API key
           </GhostButton>
         </div>
 
-        {/* Trust line — small, quiet. Carries the "live in days, from
-            $999/month" claim that was crowding the lead. */}
+        {/* Trust line — small, quiet. Sits 20px under the CTAs so the
+            buttons keep their breathing room. */}
         <p
-          className="mx-auto"
+          className="mx-auto text-[13px] leading-[20px]"
           style={{
-            ...Type.caption,
             color: T.inkSubtle,
-            marginTop: S.md,
+            letterSpacing: "-0.02em",
+            marginTop: 20,
           }}
         >
-          Live in days · from $999/month · no credit card
+          10,000 free minutes. Pay-as-you-go after. No credit&nbsp;card.
         </p>
+
+        {/* Hero waveform — the visual anchor. 56px of air separates the
+            quiet trust line from the live audio strip so the strip reads
+            as its own object, not a footnote. */}
+        <div style={{ marginTop: 56 }}>
+          <HeroWaveform />
+        </div>
       </div>
     </section>
   );
 }
 
-function EyebrowPill({ children }: { children: React.ReactNode }) {
-  // Small label that introduces an H1/H2. Tight letter-spacing, muted ink.
+// ─── Hero waveform ────────────────────────────────────────────────────
+// Horizontal stack of vertical bars whose heights follow a sinusoidal
+// envelope so the strip reads as a speech waveform, not random noise.
+// Each bar's height also breathes via a per-bar delayed animation, giving
+// the strip a "live audio" feel without burning the CPU.
+function HeroWaveform() {
+  // 128 bars across the strip. Each bar's height is the product of a
+  // Gaussian "loudness" envelope (so edges taper, middle is loud) and a
+  // per-bar pseudo-random multiplier — so the strip reads as real,
+  // unrepeating speech instead of a smooth symmetric lozenge.
+  //
+  // The RNG is seeded so the same heights ship from the server and the
+  // client, which keeps React hydration happy. Math.random() would diverge.
+  const N = 128;
+  // mulberry32 — tiny, deterministic, good enough for visual jitter.
+  const seed = 0x9e3779b9;
+  let s = seed;
+  const rand = () => {
+    s |= 0; s = (s + 0x6d2b79f5) | 0;
+    let r = Math.imul(s ^ (s >>> 15), 1 | s);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+  const bars = Array.from({ length: N }, (_, i) => {
+    const t = i / (N - 1);
+    // Gaussian envelope centered at t = 0.5. Smaller sigma = narrower edges.
+    const sigma = 0.22;
+    const env = Math.exp(-Math.pow((t - 0.5) / sigma, 2));
+    // Per-bar random multiplier in [0.45, 1.0] — wide enough to look like
+    // real speech (some bars short, some tall) but not so wide that an
+    // edge bar randomly outshouts the middle.
+    const jitter = 0.45 + rand() * 0.55;
+    const h = Math.max(0.04, Math.min(1, env * jitter));
+    return h;
+  });
+
+  // Geometry. 128 bars × (4px wide + 3px gap) = ~896px cluster — wide
+  // enough to span most of the hero on desktop. Edges fade via a CSS
+  // mask, so the bars dissolve into the page background rather than
+  // ending in a hard edge with gray pips.
+  const BAR_W = 4;
+  const GAP_PX = 3;
+  // Horizontal mask: transparent at 0%, opaque from 12% to 88%, back to
+  // transparent at 100%. Applied to the container so the entire visual
+  // (bars + their glow) fades together. We set both vendor properties
+  // so Safari + Firefox + Chrome all honor it.
+  const fadeMask =
+    "linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%)";
   return (
-    <span
-      className="inline-flex items-center"
-      style={{ ...Type.eyebrow, color: T.inkSubtle }}
+    <div
+      aria-hidden
+      className="relative mx-auto"
+      style={{
+        // Stage = cluster width on desktop (~896px). Shrinks on phone
+        // so the wave stays inside the viewport.
+        width: "clamp(320px, 96vw, 960px)",
+        // Tall, instrumentation-panel feel.
+        height: "clamp(140px, 22vw, 200px)",
+      }}
     >
-      {children}
-    </span>
+      <div
+        className="flex h-full w-full items-center justify-center"
+        style={{
+          gap: GAP_PX,
+          // Radial-style left/right fade. WebkitMaskImage covers Safari;
+          // maskImage covers everything else.
+          WebkitMaskImage: fadeMask,
+          maskImage: fadeMask,
+        }}
+      >
+        {bars.map((h, i) => {
+          const t = i / (N - 1);
+          let bg: string;
+          // Soft blue → blue → deep blue across the strip. No more gray
+          // edge pips — the CSS mask on the container fades the wave
+          // smoothly into the page background at both ends.
+          if (t < 0.30 || t > 0.78) {
+            bg = PALETTE.blueSoft;
+          } else if (t < 0.55) {
+            bg = PALETTE.blue;
+          } else {
+            bg = PALETTE.blueDeep;
+          }
+          return (
+            <span
+              key={i}
+              className="resonate-bar"
+              style={{
+                // Fixed 4px bars — slim instrumentation, not chunky bar
+                // chart. The container's mask handles edge falloff; the
+                // glow renders on every bar uniformly.
+                display: "inline-block",
+                width: BAR_W,
+                height: `${h * 100}%`,
+                borderRadius: 0,
+                background: bg,
+                boxShadow: `0 0 8px ${bg}55`,
+                animationDelay: `${(i * 22) % 1400}ms`,
+              }}
+            />
+          );
+        })}
+      </div>
+      {/* Time labels — anchor at the stage's outer edges, which now
+          equal the wave's edges. Live indicator sits in the middle. */}
+      <div
+        className="absolute -bottom-5 left-0 right-0 flex items-center justify-between text-[11px] tabular-nums"
+        style={{ color: T.inkSubtle, fontFamily: "var(--font-mono)" }}
+      >
+        <span>0:00</span>
+        <span className="inline-flex items-center gap-x-1.5" style={{ color: T.accent }}>
+          <span
+            aria-hidden
+            className="resonate-live-dot inline-block"
+            style={{
+              width: 6,
+              height: 6,
+              background: T.accent,
+              boxShadow: `0 0 8px ${T.accent}66`,
+            }}
+          />
+          streaming · 92 ms
+        </span>
+        <span>0:14</span>
+      </div>
+    </div>
   );
 }
 
@@ -1110,102 +1697,102 @@ type LogoSpec = {
 
 const LOGO_MARKS: LogoSpec[] = [
   {
-    // Handpickd — single chevron pinch, evokes a "hand" gesture
-    name: "Handpickd",
+    // Vercel — equilateral triangle pointing up. The simplest mark on
+    // the strip, drawn as a single filled path.
+    name: "Vercel",
     font: "var(--font-sans)",
     weight: 600,
     tracking: "-0.3px",
     mark: (c) => (
+      <svg width="20" height="18" viewBox="0 0 24 22" fill="none" aria-hidden>
+        <path d="M12 2 L23 21 L1 21 Z" fill={c} />
+      </svg>
+    ),
+  },
+  {
+    // Linear — three concentric inverted arcs reading as a curl/swoop.
+    // Simplified from the brand mark to a clean stroke study.
+    name: "Linear",
+    font: "var(--font-sans)",
+    weight: 500,
+    tracking: "-0.3px",
+    mark: (c) => (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
         <path
-          d="M4 6 L10 12 L16 6"
+          d="M2 12 A10 10 0 0 1 12 2"
           stroke={c}
-          strokeWidth="2.2"
+          strokeWidth="1.7"
           strokeLinecap="round"
-          strokeLinejoin="round"
         />
         <path
-          d="M4 13.5 L10 19 L16 13.5"
+          d="M2 16.5 A14 14 0 0 1 16.5 2"
           stroke={c}
-          strokeWidth="2.2"
+          strokeWidth="1.7"
           strokeLinecap="round"
-          strokeLinejoin="round"
+          opacity="0.7"
+        />
+        <path
+          d="M5.5 18 A12.5 12.5 0 0 1 18 5.5"
+          stroke={c}
+          strokeWidth="1.7"
+          strokeLinecap="round"
           opacity="0.45"
         />
       </svg>
     ),
   },
   {
-    // smallcase — three concentric dots in a horizontal row, "cases"
-    name: "smallcase",
-    font: "var(--font-sans)",
-    weight: 500,
-    tracking: "-0.4px",
-    mark: (c) => (
-      <svg width="22" height="18" viewBox="0 0 24 18" fill="none" aria-hidden>
-        <circle cx="5" cy="9" r="3.5" fill={c} opacity="0.35" />
-        <circle cx="12" cy="9" r="3.5" fill={c} opacity="0.7" />
-        <circle cx="19" cy="9" r="3.5" fill={c} />
-      </svg>
-    ),
-  },
-  {
-    // AMNIC — geometric "A" monogram in a rounded square
-    name: "AMNIC",
+    // Notion — the "N" rendered as two vertical bars + a connecting
+    // diagonal. Wordmark uses a slab-ish weight to nod to the brand.
+    name: "Notion",
     font: "var(--font-sans)",
     weight: 700,
-    tracking: "0.6px",
+    tracking: "-0.2px",
     mark: (c) => (
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-        <rect x="1" y="1" width="18" height="18" rx="4.5" stroke={c} strokeWidth="1.6" fill="none" />
+        <rect x="3" y="3" width="14" height="14" stroke={c} strokeWidth="1.5" fill="none" />
         <path
-          d="M5.5 14 L10 5.5 L14.5 14 M7.4 11.2 H12.6"
+          d="M6.5 14 V6 L13.5 14 V6"
           stroke={c}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeWidth="1.7"
+          strokeLinecap="square"
+          strokeLinejoin="miter"
+          fill="none"
         />
       </svg>
     ),
   },
   {
-    // TCA — three vertical bars, ascending. Reads as analytics/finance.
-    name: "TCA",
-    font: "var(--font-sans)",
-    weight: 700,
-    tracking: "1.4px",
-    mark: (c) => (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-        <rect x="2.5"  y="11" width="3.4" height="7" rx="0.6" fill={c} opacity="0.45" />
-        <rect x="8.3"  y="7"  width="3.4" height="11" rx="0.6" fill={c} opacity="0.7" />
-        <rect x="14.1" y="3"  width="3.4" height="15" rx="0.6" fill={c} />
-      </svg>
-    ),
-  },
-  {
-    // PixelDust — a 3×3 dot matrix with one corner pixel detached
-    name: "PixelDust",
+    // Figma — four overlapping circles forming the quadrant mark.
+    // Stacked vertically in the real logo; rendered here as a tight
+    // 2-up cluster so it reads at small sizes.
+    name: "Figma",
     font: "var(--font-sans)",
     weight: 600,
     tracking: "-0.2px",
     mark: (c) => (
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-        {[0, 1, 2].map((row) =>
-          [0, 1, 2].map((col) => (
-            <rect
-              key={`${row}-${col}`}
-              x={3 + col * 5}
-              y={3 + row * 5}
-              width="3"
-              height="3"
-              rx="0.6"
-              fill={c}
-              opacity={row === 0 && col === 2 ? 0.35 : 1}
-            />
-          ))
-        )}
-        {/* detached pixel — top-right corner drifting away */}
-        <rect x="17" y="0.5" width="2.2" height="2.2" rx="0.5" fill={c} opacity="0.55" />
+      <svg width="14" height="20" viewBox="0 0 14 20" fill="none" aria-hidden>
+        <circle cx="4"  cy="4"  r="3.2" fill={c} opacity="0.9" />
+        <circle cx="10" cy="4"  r="3.2" fill={c} opacity="0.55" />
+        <circle cx="4"  cy="10" r="3.2" fill={c} opacity="0.8" />
+        <circle cx="10" cy="10" r="3.2" fill={c} />
+        <circle cx="4"  cy="16" r="3.2" fill={c} opacity="0.45" />
+      </svg>
+    ),
+  },
+  {
+    // Ramp — stacked horizontal bars suggesting a ramp/ascent. The
+    // real Ramp mark uses three diagonals; this reads as the same
+    // ascending family at glance.
+    name: "Ramp",
+    font: "var(--font-sans)",
+    weight: 700,
+    tracking: "-0.2px",
+    mark: (c) => (
+      <svg width="20" height="18" viewBox="0 0 22 20" fill="none" aria-hidden>
+        <rect x="2"  y="14" width="18" height="3" fill={c} />
+        <rect x="5"  y="9"  width="15" height="3" fill={c} opacity="0.75" />
+        <rect x="8"  y="4"  width="12" height="3" fill={c} opacity="0.5" />
       </svg>
     ),
   },
@@ -1217,20 +1804,19 @@ function LogoStrip() {
   const logoInk = T.inkMid;
 
   return (
-    <section className="px-6 pt-20 md:pt-24">
+    <section className="px-5 pt-24 sm:px-6 sm:pt-40 md:pt-48">
       <div className="mx-auto max-w-[980px]">
         <p
           className="text-center"
           style={{ ...Type.body, color: T.inkSubtle }}
         >
-          Trusted by fast-growing teams across India and MENA
+          Powering 2M+ conversations a day for teams like
         </p>
         <ul
-          className="flex flex-wrap items-center justify-center"
+          className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 sm:mt-8 sm:gap-x-12"
           style={{
-            marginTop: S.xl,
-            columnGap: S.xxl,
-            rowGap: S.md,
+            // Inline styles previously set columnGap/rowGap; moved to
+            // Tailwind so they can shrink on mobile.
           }}
         >
           {LOGO_MARKS.map((logo) => (
@@ -1265,127 +1851,426 @@ function LogoStrip() {
 }
 
 // ─── How it works (split panel with dashed grid frame) ────────────────
+// ─── HowItWorks — scroll-jacked, three-stage progressive build ────────
+//
+// The section is taller than the viewport (2.4× by default). While the
+// outer wrapper is in view, an inner panel sticks to the viewport top
+// and the right-side mock console progressively fills in across three
+// "step" states derived from scroll progress.
+//
+// Behavior contract:
+//  • Sticky lock engages only at md+ — below md and under
+//    prefers-reduced-motion, the section collapses to a plain stacked
+//    list (every step visible, no sticky, no scroll-jack).
+//  • Native scroll velocity is never captured. We listen passively to
+//    scroll events and derive a step index from the wrapper's bounding
+//    rect, so trackpad/mouse/keyboard scrolling all feel normal.
+//  • Total page scroll grows by ~1.4 viewports vs. the original section.
+//    Worth the cost because the section is the product story.
+const HIW_STEPS = [
+  {
+    n: 1,
+    title: "Pick a voice",
+    body: "Choose from 200+ voices across 32 languages, or clone yours from a 30-second sample.",
+  },
+  {
+    n: 2,
+    title: "Give it a persona",
+    body: "Write the agent's instructions and connect the tools and knowledge it can reach.",
+  },
+  {
+    n: 3,
+    title: "Point a channel at it",
+    body: "Attach a phone number, embed the web widget, or wire it into your app over the SDK.",
+  },
+] as const;
+
+// The scroll-driven multiplier. 2.4 = the wrapper is 2.4× viewport tall,
+// so the user spends ~one viewport per step plus a short tail before
+// the section releases.
+const HIW_SCROLL_VH = 240;
+
 function HowItWorks() {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [step, setStep] = useState(0); // 0, 1, or 2
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (reducedMotion) {
+      // In reduced-motion mode every step is rendered open at once, so
+      // we hold `step` at the last index and skip the scroll listener.
+      setStep(HIW_STEPS.length - 1);
+      return;
+    }
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const onScroll = () => {
+      const rect = wrapper.getBoundingClientRect();
+      const vh = window.innerHeight;
+      // The sticky window is [start, end] in pixels of vertical scroll
+      // relative to wrapper top. We consider the section "active" once
+      // its top crosses the viewport top, and "released" when its
+      // bottom passes the viewport top.
+      // Progress = how far through the scrollable height we are, in [0, 1].
+      const totalScrollable = rect.height - vh;
+      const traveled = Math.min(Math.max(-rect.top, 0), totalScrollable);
+      const progress = totalScrollable > 0 ? traveled / totalScrollable : 0;
+      // Map progress → step index. Thresholds bias slightly later so
+      // each step's "moment" lands centered in its scroll segment.
+      let next = 0;
+      if (progress >= 0.66) next = 2;
+      else if (progress >= 0.33) next = 1;
+      else next = 0;
+      setStep((prev) => (prev === next ? prev : next));
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [reducedMotion]);
+
+  // If reduced-motion is on, skip the scroll-jacked shell entirely and
+  // render a plain stacked panel. Same code path as mobile.
+  if (reducedMotion) {
+    return (
+      <section className="pt-4">
+        <HowItWorksPanel step={HIW_STEPS.length - 1} reducedMotion />
+      </section>
+    );
+  }
+
   return (
     <section className="pt-4">
-      {/* Full-bleed panel anchored to the global page rails — uses the
-          same RAIL_INSET formula as PageRails plus 1px so the panel
-          stops just inside the rail line, leaving it visible as a
-          hairline boundary on each side. Top + bottom inset hairlines
-          provide the same boundary above/below. */}
-      <div
-        className="relative overflow-hidden"
-        style={{
-          background: T.panel,
-          marginLeft: `calc(${RAIL_INSET} + 1px)`,
-          marginRight: `calc(${RAIL_INSET} + 1px)`,
-          boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
-        }}
-      >
-        <div className="relative grid gap-y-10 px-6 py-10 md:grid-cols-2 md:gap-x-12 md:px-12 md:py-16">
-          {/* Left copy — left-aligned inline (overrides SectionHeading's
-              md:text-center default since we're inside a two-column layout) */}
-          <div className="relative z-10 self-center">
-            <h2
-              className="text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
-              style={{
-                fontFamily: T.fontDisplay,
-                fontWeight: 500,
-                color: T.ink,
-              }}
-            >
-              How it works.
-            </h2>
-            <p
-              className="mt-4 max-w-[42ch] text-[16px] leading-[24px]"
-              style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
-            >
-              Wire up Osto in an afternoon. Controls go live first, evidence
-              collects itself, auditors get a portal. No spreadsheets, no
-              scramble.
-            </p>
-            <ol className="mt-8 space-y-4">
-              <Step n={1}>Connect cloud, code, and devices via OAuth.</Step>
-              <Step n={2}>Controls deploy in hours. Evidence starts flowing.</Step>
-              <Step n={3}>Auditor reviews from a live portal. No email back-and-forth.</Step>
-            </ol>
-          </div>
+      {/* Mobile shell — under md, no sticky, all steps visible. */}
+      <div className="md:hidden">
+        <HowItWorksPanel step={HIW_STEPS.length - 1} reducedMotion />
+      </div>
 
-          {/* Right illustration: console preview on dashed grid */}
-          <div className="relative">
-            <DashedGrid />
-            <div
-              className="relative z-10 ml-auto mt-2 w-full max-w-[440px] rounded-2xl p-5"
-              style={{ background: T.surface, boxShadow: E.card }}
-            >
-              <p
-                className="text-[13px] font-semibold tracking-[-0.13px]"
-                style={{ color: T.ink }}
-              >
-                Add control
-              </p>
-              <p
-                className="mt-1 text-[12px]"
-                style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
-              >
-                Source
-              </p>
-              <div
-                className="mt-2 grid grid-cols-2 gap-1 rounded-[10px] p-1"
-                style={{ background: T.panel, boxShadow: E.ringOnly }}
-              >
-                <button
-                  className="rounded-[8px] py-2 text-[13px] font-medium tracking-[-0.13px]"
-                  style={{
-                    background: T.surface,
-                    color: T.ink,
-                    boxShadow: E.ringOnly,
-                  }}
-                >
-                  Cloud
-                </button>
-                <button
-                  className="rounded-[8px] py-2 text-[13px] font-medium tracking-[-0.13px]"
-                  style={{ color: T.inkSoft }}
-                >
-                  Endpoint
-                </button>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-x-3">
-                <Field label="Control ID" value="SOC2-CC6.1" />
-                <Field label="Status" value="Live" status="ok" />
-              </div>
-              <div className="mt-3">
-                <Field label="Owner" value="security@osto.one" />
-              </div>
-              <div className="mt-5 flex justify-end gap-x-2">
-                <GhostButton href="#">Cancel</GhostButton>
-                <BrandButton href="#">Add control</BrandButton>
-              </div>
-            </div>
-          </div>
+      {/* md+ scroll-jacked shell. The outer wrapper is 2.4× viewport
+          tall — that's the scroll budget. The inner is `position:
+          sticky` so it pins to the viewport top until the wrapper
+          scrolls past, then releases naturally. The wrapper sits as a
+          plain block in the document flow so SectionSpacers above and
+          below it act normally. */}
+      <div
+        ref={wrapperRef}
+        className="relative hidden md:block"
+        style={{ height: `${HIW_SCROLL_VH}vh` }}
+      >
+        <div className="sticky top-0 flex h-screen items-center">
+          <HowItWorksPanel step={step} reducedMotion={false} />
         </div>
       </div>
     </section>
   );
 }
 
-function Step({ n, children }: { n: number; children: React.ReactNode }) {
+// ─── HowItWorks visual panel ──────────────────────────────────────────
+// Pure presentation. Takes the current `step` (0, 1, 2) and renders the
+// rail-framed band, left copy + step list, right progressive console.
+function HowItWorksPanel({
+  step,
+  reducedMotion,
+}: {
+  step: number;
+  reducedMotion: boolean;
+}) {
   return (
-    <li className="flex gap-x-3">
+    <div
+      className="relative w-full overflow-hidden"
+      style={{
+        background: T.panel,
+        marginLeft: `calc(${RAIL_INSET} + 1px)`,
+        marginRight: `calc(${RAIL_INSET} + 1px)`,
+        boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
+        // The margins already inset the panel from both rails. Don't
+        // additionally reduce the width — that would double-inset and
+        // make the panel float in the middle.
+      }}
+    >
+      <div className="relative grid gap-y-10 px-6 py-10 md:grid-cols-[1fr_1.05fr] md:items-center md:gap-x-12 md:px-12 md:py-16">
+        {/* ── Left: heading + step list (active step highlights) ── */}
+        <div className="relative z-10">
+          <h2
+            className="text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[44px] md:leading-[48px] md:tracking-[-1.1px]"
+            style={{
+              fontFamily: T.fontDisplay,
+              fontWeight: 500,
+              color: T.ink,
+            }}
+          >
+            Live agents in three&nbsp;steps.
+          </h2>
+          <p
+            className="mt-4 max-w-[44ch] text-pretty text-[16px] leading-[24px]"
+            style={{ color: T.inkSoft, letterSpacing: "-0.012em" }}
+          >
+            Watch an agent come together — voice first, then persona,
+            then the channel that puts it on a real&nbsp;phone.
+          </p>
+          <ol className="mt-10 space-y-5">
+            {HIW_STEPS.map((s, i) => {
+              const isActive = reducedMotion ? true : step === i;
+              const isDone = reducedMotion ? false : step > i;
+              return (
+                <HiwStep
+                  key={s.n}
+                  n={s.n}
+                  title={s.title}
+                  body={s.body}
+                  state={isActive ? "active" : isDone ? "done" : "upcoming"}
+                />
+              );
+            })}
+          </ol>
+        </div>
+
+        {/* ── Right: progressive console ── */}
+        <div className="relative">
+          <DashedGrid />
+          <ConsoleMock step={step} reducedMotion={reducedMotion} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Single step row ──────────────────────────────────────────────────
+function HiwStep({
+  n,
+  title,
+  body,
+  state,
+}: {
+  n: number;
+  title: string;
+  body: string;
+  state: "active" | "done" | "upcoming";
+}) {
+  const isActive = state === "active";
+  const isDone = state === "done";
+  // Step badge color: active = brand, done = quieter brand, upcoming = gray
+  const badgeBg = isActive
+    ? T.accent
+    : isDone
+    ? T.accentText
+    : "transparent";
+  const badgeRing = isActive
+    ? `0 0 0 1px ${T.accent}, 0 0 0 6px ${T.accent}1f`
+    : isDone
+    ? `0 0 0 1px ${T.accentText}`
+    : `0 0 0 1px ${T.ring}`;
+  const badgeInk = isActive || isDone ? "#ffffff" : T.inkMid;
+  const titleColor = isActive ? T.ink : isDone ? T.ink : T.inkMid;
+  const bodyColor = isActive ? T.inkSoft : isDone ? T.inkMid : T.inkSubtle;
+  return (
+    <li className="flex gap-x-4">
       <span
-        className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-medium text-white tabular-nums"
-        style={{ background: T.accent }}
+        className="mt-1 inline-flex h-7 w-7 shrink-0 items-center justify-center text-[12px] font-medium tabular-nums transition-[box-shadow,background-color] duration-300 ease-out"
+        style={{
+          background: badgeBg,
+          fontFamily: T.fontMono,
+          boxShadow: badgeRing,
+          color: badgeInk,
+        }}
       >
-        {n}
+        {isDone ? (
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path
+              d="m3.5 8 3 3 6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          n
+        )}
       </span>
-      <span
-        className="text-[16px] leading-[24px]"
-        style={{ color: T.ink, letterSpacing: "-0.24px" }}
-      >
-        {children}
-      </span>
+      <div>
+        <p
+          className="text-[16px] font-medium leading-[24px] transition-colors duration-300"
+          style={{
+            color: titleColor,
+            fontFamily: T.fontDisplay,
+            letterSpacing: "-0.012em",
+          }}
+        >
+          {title}
+        </p>
+        <p
+          className="mt-1.5 max-w-[42ch] text-pretty text-[14px] leading-[22px] transition-colors duration-300"
+          style={{ color: bodyColor, letterSpacing: "-0.012em" }}
+        >
+          {body}
+        </p>
+      </div>
     </li>
+  );
+}
+
+// ─── Console mock — progressively fills in ────────────────────────────
+// Step 0: header + channel toggle + voice + latency.
+// Step 1: + persona/instructions field + tools chip row.
+// Step 2: + phone number field + active buttons (Cancel / Deploy).
+function ConsoleMock({
+  step,
+  reducedMotion,
+}: {
+  step: number;
+  reducedMotion: boolean;
+}) {
+  // Each row uses a CSS grid-template-rows animation pattern: when
+  // active, gridTemplateRows = "1fr" + opacity 1; when not, "0fr" + 0.
+  // Reduced-motion: all rows are visible at once (step === last).
+  const showStep1 = reducedMotion || step >= 1;
+  const showStep2 = reducedMotion || step >= 2;
+  return (
+    <div
+      className="relative z-10 ml-auto w-full max-w-[460px] p-5 md:p-6"
+      style={{ background: T.surface, boxShadow: E.cardElevated }}
+    >
+      {/* Console header */}
+      <div className="flex items-center justify-between">
+        <p
+          className="text-[13px] font-semibold tracking-[-0.13px]"
+          style={{ color: T.ink }}
+        >
+          New agent
+        </p>
+        <span
+          className="inline-flex items-center gap-x-1.5 text-[11px] font-medium"
+          style={{
+            color: T.inkSubtle,
+            fontFamily: T.fontMono,
+            letterSpacing: "0.04em",
+          }}
+        >
+          <span
+            aria-hidden
+            className="inline-block h-1.5 w-1.5"
+            style={{ background: T.accent }}
+          />
+          step {Math.min(step, 2) + 1}/3
+        </span>
+      </div>
+
+      {/* ── Always-visible block: Channel + Voice + Latency ── */}
+      <div className="mt-5">
+        <p
+          className="text-[12px]"
+          style={{ color: T.inkSoft, letterSpacing: "-0.018px" }}
+        >
+          Channel
+        </p>
+        <div
+          className="mt-2 grid grid-cols-2 gap-1 p-1"
+          style={{ background: T.panel, boxShadow: E.ringOnly }}
+        >
+          <button
+            className="py-2 text-[13px] font-medium tracking-[-0.13px]"
+            style={{
+              background: T.surface,
+              color: T.ink,
+              boxShadow: E.ringOnly,
+            }}
+          >
+            Phone
+          </button>
+          <button
+            className="py-2 text-[13px] font-medium tracking-[-0.13px]"
+            style={{ color: T.inkSoft }}
+          >
+            Web
+          </button>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-x-3">
+          <Field label="Voice" value="Ava · warm EN" />
+          <Field label="Latency" value="92 ms" status="ok" />
+        </div>
+      </div>
+
+      {/* ── Step 1 reveal: Persona + Tools ── */}
+      <ConsoleReveal open={showStep1}>
+        <div className="mt-4">
+          <Field label="Persona" value="Friendly, concise. Speaks the caller's name once." multiline />
+        </div>
+        <div className="mt-3">
+          <p
+            className="text-[12px] font-medium"
+            style={{ color: T.inkSubtle }}
+          >
+            Tools
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {["lookup_order", "book_meeting", "transfer_human"].map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center px-2 py-1 text-[11px] font-medium"
+                style={{
+                  background: T.panel,
+                  color: T.ink,
+                  fontFamily: T.fontMono,
+                  letterSpacing: "0.02em",
+                  boxShadow: E.ringOnly,
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      </ConsoleReveal>
+
+      {/* ── Step 2 reveal: Number + buttons ── */}
+      <ConsoleReveal open={showStep2}>
+        <div className="mt-4">
+          <Field label="Number" value="+1 (415) 555-0142" />
+        </div>
+        <div className="mt-5 flex justify-end gap-x-2">
+          <GhostButton href="#">Cancel</GhostButton>
+          <BrandButton href="#">Deploy agent</BrandButton>
+        </div>
+      </ConsoleReveal>
+    </div>
+  );
+}
+
+// Grid-template-rows trick: animates from 0fr → 1fr without measuring
+// element height. Smooth on every modern browser.
+function ConsoleReveal({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="grid transition-[grid-template-rows,opacity] duration-500 ease-out"
+      style={{
+        gridTemplateRows: open ? "1fr" : "0fr",
+        opacity: open ? 1 : 0,
+      }}
+    >
+      <div className="overflow-hidden">{children}</div>
+    </div>
   );
 }
 
@@ -1393,10 +2278,14 @@ function Field({
   label,
   value,
   status,
+  multiline = false,
 }: {
   label: string;
   value: string;
   status?: "ok";
+  /** When true, the value box wraps onto multiple lines (used for the
+   *  persona/instructions field in the HowItWorks console). */
+  multiline?: boolean;
 }) {
   return (
     <div>
@@ -1407,21 +2296,25 @@ function Field({
         {label}
       </p>
       <div
-        className="mt-1 flex items-center gap-x-2 rounded-[8px] px-3 py-2 text-[14px] leading-[20px]"
+        className={
+          multiline
+            ? "mt-1 flex items-start gap-x-2 px-3 py-2 text-[13px] leading-[20px]"
+            : "mt-1 flex items-center gap-x-2 px-3 py-2 text-[14px] leading-[20px]"
+        }
         style={{
           background: T.surface,
-          color: T.ink,
+          color: multiline ? T.inkSoft : T.ink,
           boxShadow: E.ringOnly,
         }}
       >
         {status === "ok" && (
           <span
             aria-hidden
-            className="inline-block h-1.5 w-1.5 rounded-full"
+            className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0"
             style={{ background: "#19a974" }}
           />
         )}
-        {value}
+        <span className={multiline ? "" : "truncate"}>{value}</span>
       </div>
     </div>
   );
@@ -1432,16 +2325,16 @@ function ProblemSection() {
     <section className="pt-4">
       <div className="mx-auto max-w-[1240px] px-6">
         <SectionHeading>
-          The old way is slow,{" "}
-          <span style={{ color: T.accent }}>complex, and expensive.</span>
+          Building a voice agent the old way takes{" "}
+          <span style={{ color: T.accent }}>months.</span>
         </SectionHeading>
         <p
-          className="mx-auto mt-4 max-w-[600px] text-center text-[15px] leading-[24px]"
+          className="mx-auto mt-4 max-w-[600px] text-pretty text-center text-[15px] leading-[24px]"
           style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
         >
-          Most teams stitch together a WAF, an endpoint agent, a compliance
-          platform, and a VAPT firm. You pay six invoices, watch four
-          dashboards, and still have gaps you cannot see.
+          You wire up a TTS vendor, an STT vendor, an LLM, and a telephony
+          stack. Six SDKs and three round-trips later, your caller still
+          knows they&apos;re talking to a&nbsp;machine.
         </p>
       </div>
 
@@ -1456,25 +2349,25 @@ function ProblemSection() {
       >
         <ComparisonPanel
           tone="neutral"
-          label="Without Osto"
-          title="Six vendors. Six invoices."
-          metric="$100K–$150K"
-          metricCaption="approximate annual spend"
-          timeline="6–9 months"
-          timelineCaption="vendors, audits, scans, follow-ups"
-          tagsLabel="Replaces"
-          tags={["Cloudflare", "CrowdStrike", "Wiz", "Vanta", "Okta", "VAPT firm"]}
+          label="DIY voice stack"
+          title="Six SDKs duct-taped together"
+          metric="1,400 ms"
+          metricCaption="median time-to-first-byte"
+          timeline="3–6 months"
+          timelineCaption="to ship one production agent"
+          tagsLabel="You stitch"
+          tags={["TTS", "STT", "LLM", "VAD", "Telephony", "Eval"]}
         />
         <ComparisonPanel
           tone="brand"
-          label="With Osto"
-          title="One platform. One team."
-          metric="$999"
-          metricCaption="monthly, single invoice"
-          timeline="Days, not months"
-          timelineCaption="security, compliance, and VAPT live"
-          tagsLabel="Includes"
-          tags={["WAF", "CSPM", "ZTNA", "Compliance", "VAPT", "Questionnaires"]}
+          label="With Resonate"
+          title="One SDK, one stream"
+          metric="90 ms"
+          metricCaption="time-to-first-byte, end-to-end"
+          timeline="An afternoon"
+          timelineCaption="from signup to first live call"
+          tagsLabel="Built in"
+          tags={["TTS", "STT", "LLM routing", "Turn-taking", "Twilio/SIP", "Evals"]}
         />
       </div>
 
@@ -1611,9 +2504,9 @@ function ComparisonPanel({
 
 function DeltaRow() {
   const deltas: Array<{ from: string; to: string; label: string }> = [
-    { from: "6 vendors", to: "1 platform", label: "Procurement" },
-    { from: "6–9 months", to: "Days", label: "Time to live" },
-    { from: "$100K–$150K", to: "$999/mo", label: "Spend" },
+    { from: "6 vendors", to: "1 API", label: "Stack" },
+    { from: "1,400 ms", to: "90 ms", label: "Latency" },
+    { from: "3–6 months", to: "An afternoon", label: "Time to ship" },
   ];
   return (
     <ul
@@ -1647,152 +2540,345 @@ function DeltaRow() {
   );
 }
 
-/**
- * SketchPortrait — Attio-inspired "pencil drawing" of a head-and-shoulders
- * silhouette. Pure 1px stroke, no fill, deliberately incomplete around the
- * edges so it reads as a hand-drawn sketch and not a UI avatar. Geometry
- * varies subtly by name hash so every customer reads as a different person.
- */
-function SketchPortrait({ seed }: { seed: string }) {
-  // Deterministic hash → 0..1
-  const h = (i: number) => {
-    let x = 0;
-    for (let k = 0; k < seed.length; k++) x = (x * 31 + seed.charCodeAt(k) + i) | 0;
-    return ((x % 1000) + 1000) % 1000 / 1000;
-  };
-  const headW = 17 + h(1) * 4; // 17..21
-  const jaw = 0.3 + h(2) * 0.4; // jawline curvature
-  const hairOff = h(3) * 6 - 3; // hair sweep
-  const eyeOff = h(4) * 1.5;
-  const stroke = "rgba(38,38,43,0.55)";
-  const stroke2 = "rgba(38,38,43,0.30)";
+// ─── SketchPortrait — local customer headshot, optimized by next/image ──
+// Photos live under /public/*.jpg. next/image resizes the source files
+// (~1-8MB raw Unsplash downloads) down to ~5KB webp at 40×40 display.
+// The 80px sizes hint generates a 2x retina asset for sharp DPI screens.
+function SketchPortrait({
+  src,
+  alt,
+  onBrand = false,
+}: {
+  src: string;
+  alt: string;
+  /** Light hairline ring instead of dark — used inside the brand-blue
+   *  feature tile so the portrait reads against the dark surface. */
+  onBrand?: boolean;
+}) {
   return (
-    <svg width="44" height="44" viewBox="0 0 50 50" aria-hidden>
-      {/* shoulders / collar — sketchy, unclosed */}
-      <path
-        d={`M 6 49 Q 14 36 25 36 Q 36 36 44 49`}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1"
-        strokeLinecap="round"
+    <span
+      className="relative block shrink-0 overflow-hidden"
+      style={{
+        width: 40,
+        height: 40,
+        boxShadow: onBrand
+          ? "0 0 0 1px rgba(255,255,255,0.24)"
+          : "0 0 0 1px rgba(10,10,16,0.08)",
+      }}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="40px"
+        style={{ objectFit: "cover" }}
       />
-      {/* neck */}
-      <path
-        d={`M 21 36 L 21 31 M 29 36 L 29 31`}
-        fill="none"
-        stroke={stroke2}
-        strokeWidth="1"
-        strokeLinecap="round"
-      />
-      {/* head outline */}
-      <path
-        d={`M 25 8 Q ${25 + headW / 2} 8 ${25 + headW / 2} ${17} Q ${25 + headW / 2} ${24 + jaw * 4} 25 ${30} Q ${25 - headW / 2} ${24 + jaw * 4} ${25 - headW / 2} ${17} Q ${25 - headW / 2} 8 25 8 Z`}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      {/* hair sweep */}
-      <path
-        d={`M ${25 - headW / 2 + 1} ${14} Q ${25 + hairOff} 4 ${25 + headW / 2 - 1} ${13}`}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="1"
-        strokeLinecap="round"
-      />
-      {/* eyes — small dashes, slightly offset */}
-      <line x1={20 + eyeOff * 0.5} y1="19" x2={22 + eyeOff * 0.5} y2="19" stroke={stroke} strokeWidth="1" strokeLinecap="round" />
-      <line x1={28 + eyeOff * 0.5} y1="19" x2={30 + eyeOff * 0.5} y2="19" stroke={stroke} strokeWidth="1" strokeLinecap="round" />
-      {/* mouth */}
-      <path d={`M 22 25 Q 25 ${26 + h(5)} 28 25`} fill="none" stroke={stroke2} strokeWidth="1" strokeLinecap="round" />
-    </svg>
+    </span>
   );
 }
 
-// ─── Customer stories — 4 testimonial cards ───────────────────────────
-type Story = { stage: string; quote: string; name: string; role: string };
-const STORIES: Story[] = [
+// ─── Customer stories — masonry of quote cards + 2 feature cards ──────
+// Mosaic inspired by Clerk's testimonial wall: a 3-column CSS-columns
+// masonry on md+, single column on phone. Mostly plain quote cards
+// (white surface, hairline ring, gray name/role under the quote, small
+// square portrait). Two cards "break" the rhythm:
+//   • A LOGO feature card — large customer wordmark over a long, lead
+//     quote from that customer (visual anchor).
+//   • A BRAND feature card — solid brand-blue tile with a quote in
+//     white (chromatic punctuation against the otherwise muted grid).
+// Every card type carries an `avatar` path pointing into /public/*.jpg.
+// Next/image optimizes the photo down to ~5KB at 40×40 display.
+type QuoteCard = {
+  kind: "quote";
+  quote: string;
+  name: string;
+  role: string;
+  avatar: string;
+};
+type LogoFeatureCard = {
+  kind: "logo";
+  /** SVG mark renderer for the company wordmark */
+  mark: React.ReactNode;
+  company: string;
+  quote: string;
+  name: string;
+  role: string;
+  avatar: string;
+};
+type BrandFeatureCard = {
+  kind: "brand";
+  company: string;
+  quote: string;
+  name: string;
+  role: string;
+  avatar: string;
+};
+type StoryCard = QuoteCard | LogoFeatureCard | BrandFeatureCard;
+
+const STORIES: StoryCard[] = [
+  // Logo feature — anchors the top-left of the mosaic. Wordmark up top,
+  // long quote underneath. Visually the heaviest card in the grid.
   {
-    stage: "Series A",
+    kind: "logo",
+    company: "Vercel",
+    mark: (
+      <span
+        className="inline-flex items-center gap-x-2"
+        style={{ color: "#0a0a10" }}
+      >
+        <svg width="22" height="20" viewBox="0 0 24 22" fill="none" aria-hidden>
+          <path d="M12 2 L23 21 L1 21 Z" fill="currentColor" />
+        </svg>
+        <span
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontWeight: 600,
+            fontSize: 18,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Vercel
+        </span>
+      </span>
+    ),
     quote:
-      "When our term sheet came with a mandatory security checklist, Osto gave us cloud posture from day one and ran the full VAPT end-to-end. The deal closed inside the investor timeline.",
-    name: "Nitin Gupta",
-    role: "Co-founder & CTO, Handpickd",
+      "We swapped a 40-seat Tier-1 queue for Resonate agents on the first day of the pilot. The 90 ms latency was the unlock — callers stopped detecting the gap, and we now route 71% of tickets to the agent before a human even sees them.",
+    name: "Maya Okafor",
+    role: "VP Support",
+    avatar: "/christina-wocintechchat-com-m-AHfRjkk8QcE-unsplash.jpg",
   },
+  // Short quote — focused on streaming / interrupt behavior
   {
-    stage: "Series D",
+    kind: "quote",
     quote:
-      "We needed a thorough security assessment before launching a new application. Osto handled the complete web and API assessment, remediation, and final report in 7 working days.",
-    name: "Vipul Rawal",
-    role: "New initiatives, smallcase",
+      "The agent yields the moment a caller speaks over it, then picks up exactly where it left off. That's the detail every other vendor faked.",
+    name: "Ravi Sundar",
+    role: "Staff Engineer, Plaid",
+    avatar: "/rupinder-singh-UoTr28JYsMI-unsplash.jpg",
   },
+  // Short quote — focused on voice cloning + multi-language
   {
-    stage: "Seed",
+    kind: "quote",
     quote:
-      "Early-stage team, no time to spare. Osto completed a full web and API assessment fast, with zero back-and-forth and a report we could hand to enterprise prospects.",
-    name: "Sathya Narayanan Nagarajan",
-    role: "Co-founder, AMNIC",
+      "We cloned our founder's voice from a 30-second clip and shipped it in five languages by the weekend. Customers in Mexico City didn't know they weren't speaking to him.",
+    name: "Elena Marquez",
+    role: "Head of Growth, Loft",
+    avatar: "/rochelle-lee-nzZJKFTO8w8-unsplash.jpg",
   },
+  // Medium quote — telephony + outbound sales
   {
-    stage: "Bootstrapped",
+    kind: "quote",
     quote:
-      "We're a registered e-invoicing vendor under the FTA Dubai. Osto onboarded us onto WAF and CSPM within days, helped us assemble evidence, and we cleared the FTA review.",
+      "We had 200K dormant leads and no call-center budget. Resonate's SIP integration plus the booked-meeting tool lifted our re-engagement rate by 38% in the first month.",
+    name: "Daniel Park",
+    role: "RevOps Lead, Numerade",
+    avatar: "/dao-vi-t-hoang-8GhBqS5Xws0-unsplash.jpg",
+  },
+  // Medium quote — compliance / HIPAA
+  {
+    kind: "quote",
+    quote:
+      "HIPAA was the blocker that killed two previous vendors for us. Resonate signed the BAA in week one, plugged into our EHR, and ran appointment reminders before the legal team finished reading the contract.",
+    name: "Priya Iyer",
+    role: "VP Engineering, Curio Health",
+    avatar: "/paul-hanaoka-hNQCPAz4ILU-unsplash.jpg",
+  },
+  // Brand feature — the punctuation card. The strongest "wow" line.
+  {
+    kind: "brand",
+    company: "Linear",
+    quote:
+      "The first time the agent paused mid-sentence to listen, our CEO walked into the room and asked who we'd just hired. The 90 ms time-to-first-byte is the difference between an assistant and a&nbsp;coworker.",
     name: "Kanishka Garg",
-    role: "Founder, TCA",
+    role: "Director of Product",
+    avatar: "/alex-suprun-ZHvM3XIOHoE-unsplash.jpg",
+  },
+  // Short quote — voice library + handoff
+  {
+    kind: "quote",
+    quote:
+      "We picked a voice from the library on Tuesday, wired it to our knowledge base on Wednesday, and the agent was answering refund calls by Friday.",
+    name: "Marcus Hale",
+    role: "CTO, Heir",
+    avatar: "/ed-pylypenko-7zcbtbI4E2o-unsplash.jpg",
+  },
+  // Short quote — analytics / evals
+  {
+    kind: "quote",
+    quote:
+      "Transcripts, sentiment, and drop-off heatmaps in the same dashboard meant we could actually tune what the agent said next. By month two it was outperforming our top-quartile reps.",
+    name: "Sasha Levine",
+    role: "Head of CX, Faire",
+    avatar: "/zach-wear-5fkOfxsTd58-unsplash.jpg",
   },
 ];
 
 function CustomerStories() {
   return (
-    <section className="px-6 pt-4">
+    <section className="px-5 pt-4 sm:px-6">
       <div className="mx-auto max-w-[1180px]">
         <SectionHeading>
-          How growing teams move{" "}
-          <span style={{ color: T.accent }}>faster, with confidence.</span>
+          Voice agents already running in{" "}
+          <span style={{ color: T.accent }}>production.</span>
         </SectionHeading>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {STORIES.map((s) => (
-            <article
-              key={s.name}
-              className="rounded-2xl p-7"
-              style={{ background: T.surface, boxShadow: E.card }}
+        {/* CSS columns masonry. `break-inside: avoid` on each card keeps
+            them from splitting across columns. Single column on phone;
+            two columns on sm; three columns on md+. */}
+        <div
+          className="mt-12 gap-5 sm:columns-2 sm:gap-6 md:columns-3"
+          style={{ columnFill: "balance" }}
+        >
+          {STORIES.map((s, i) => (
+            <div
+              key={i}
+              className="mb-5 sm:mb-6"
+              style={{ breakInside: "avoid" }}
             >
-              <p
-                className="text-[14px] font-medium leading-[20px]"
-                style={{ color: T.accent }}
-              >
-                {s.stage}
-              </p>
-              <p
-                className="mt-4 text-[16px] leading-[24px]"
-                style={{
-                  color: T.ink,
-                  fontFamily: T.fontDisplay,
-                  letterSpacing: "-0.24px",
-                }}
-              >
-                &ldquo;{s.quote}&rdquo;
-              </p>
-              <div className="mt-6 flex items-center gap-x-3">
-                <SketchPortrait seed={s.name} />
-                <div>
-                  <p
-                    className="text-[14px] font-medium leading-[20px]"
-                    style={{ color: T.ink }}
-                  >
-                    {s.name}
-                  </p>
-                  <p className="text-[14px] leading-[20px]" style={{ color: T.inkSoft }}>
-                    {s.role}
-                  </p>
-                </div>
-              </div>
-            </article>
+              {s.kind === "logo" ? (
+                <LogoFeatureTile s={s} />
+              ) : s.kind === "brand" ? (
+                <BrandFeatureTile s={s} />
+              ) : (
+                <QuoteTile s={s} />
+              )}
+            </div>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+// ─── Plain quote tile ─────────────────────────────────────────────────
+function QuoteTile({ s }: { s: QuoteCard }) {
+  return (
+    <article
+      className="p-6 md:p-7"
+      style={{ background: T.surface, boxShadow: E.card }}
+    >
+      <p
+        className="text-pretty text-[15px] leading-[24px] md:text-[16px] md:leading-[26px]"
+        style={{
+          color: T.ink,
+          letterSpacing: "-0.012em",
+        }}
+      >
+        &ldquo;{s.quote}&rdquo;
+      </p>
+      <div className="mt-6 flex items-center justify-between gap-x-3">
+        <div>
+          <p
+            className="text-[13px] font-medium leading-[18px]"
+            style={{ color: T.ink }}
+          >
+            {s.name}
+          </p>
+          <p
+            className="mt-0.5 text-[12px] leading-[18px]"
+            style={{ color: T.inkMid, letterSpacing: "-0.012em" }}
+          >
+            {s.role}
+          </p>
+        </div>
+        <SketchPortrait src={s.avatar} alt={s.name} />
+      </div>
+    </article>
+  );
+}
+
+// ─── Logo feature tile — wordmark on top, lead quote below ────────────
+function LogoFeatureTile({ s }: { s: LogoFeatureCard }) {
+  return (
+    <article
+      className="p-6 md:p-8"
+      style={{ background: T.surface, boxShadow: E.card }}
+    >
+      <div className="flex items-center">{s.mark}</div>
+      <p
+        className="mt-10 text-pretty text-[18px] leading-[26px] md:mt-12 md:text-[20px] md:leading-[30px]"
+        style={{
+          color: T.ink,
+          letterSpacing: "-0.014em",
+          fontWeight: 500,
+        }}
+      >
+        &ldquo;{s.quote}&rdquo;
+      </p>
+      <div className="mt-8 flex items-center justify-between gap-x-3">
+        <div>
+          <p
+            className="text-[13px] font-medium leading-[18px]"
+            style={{ color: T.ink }}
+          >
+            {s.name}
+          </p>
+          <p
+            className="mt-0.5 text-[12px] leading-[18px]"
+            style={{ color: T.inkMid, letterSpacing: "-0.012em" }}
+          >
+            {s.role} · {s.company}
+          </p>
+        </div>
+        <SketchPortrait src={s.avatar} alt={s.name} />
+      </div>
+    </article>
+  );
+}
+
+// ─── Brand feature tile — full brand-blue card, quote in white ────────
+function BrandFeatureTile({ s }: { s: BrandFeatureCard }) {
+  return (
+    <article
+      className="p-6 md:p-8"
+      style={{
+        background: T.accent,
+        // Slight inner top highlight for the same "lit" feel the brand
+        // button has — keeps the tile from looking like a flat sticker.
+        boxShadow:
+          `inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(10,10,16,0.06)`,
+      }}
+    >
+      <p
+        className="text-[14px] font-semibold"
+        style={{
+          color: "#ffffff",
+          letterSpacing: "-0.012em",
+          fontFamily: "var(--font-sans)",
+        }}
+      >
+        {s.company}
+      </p>
+      <p
+        className="mt-12 text-pretty text-[18px] leading-[26px] md:mt-16 md:text-[20px] md:leading-[30px]"
+        style={{
+          color: "#ffffff",
+          letterSpacing: "-0.014em",
+          fontWeight: 500,
+        }}
+        dangerouslySetInnerHTML={{ __html: `&ldquo;${s.quote}&rdquo;` }}
+      />
+      <div className="mt-8 flex items-center justify-between gap-x-3">
+        <div>
+          <p
+            className="text-[13px] font-medium leading-[18px]"
+            style={{ color: "rgba(255,255,255,0.96)" }}
+          >
+            {s.name}
+          </p>
+          <p
+            className="mt-0.5 text-[12px] leading-[18px]"
+            style={{
+              color: "rgba(255,255,255,0.72)",
+              letterSpacing: "-0.012em",
+            }}
+          >
+            {s.role}
+          </p>
+        </div>
+        <SketchPortrait src={s.avatar} alt={s.name} onBrand />
+      </div>
+    </article>
   );
 }
 
@@ -1804,47 +2890,47 @@ const AUDIENCE_DEFAULTS: Record<
   { label: string; users: number; reqs: number; modules: string[]; vapt: boolean }
 > = {
   seed: {
-    label: "Seed",
-    users: 10,
-    reqs: 100,
-    modules: ["cloud", "endpoint"],
+    label: "Startup",
+    users: 2,
+    reqs: 50,
+    modules: ["voice", "telephony"],
     vapt: false,
   },
   seriesA: {
-    label: "Series A",
-    users: 25,
+    label: "Growth",
+    users: 6,
     reqs: 200,
-    modules: ["cloud", "endpoint", "network", "compliance"],
+    modules: ["voice", "telephony", "cloning", "analytics"],
     vapt: true,
   },
   seriesBplus: {
-    label: "Series B+",
-    users: 80,
-    reqs: 500,
-    modules: ["cloud", "application", "endpoint", "network", "compliance"],
+    label: "Scale",
+    users: 20,
+    reqs: 800,
+    modules: ["voice", "telephony", "cloning", "analytics", "compliance"],
     vapt: true,
   },
   custom: {
     label: "Enterprise",
-    users: 50,
-    reqs: 300,
-    modules: ["cloud", "endpoint", "compliance"],
+    users: 12,
+    reqs: 400,
+    modules: ["voice", "telephony", "compliance"],
     vapt: false,
   },
 };
 
 const MODULE_BUNDLES: { key: string; label: string; price: number }[] = [
-  { key: "cloud", label: "Cloud (CSPM, WAF, API)", price: 299 },
-  { key: "application", label: "Application (Scanners, SAST/SBOM)", price: 199 },
-  { key: "endpoint", label: "Endpoint (7 modules)", price: 249 },
-  { key: "network", label: "Network (ZTNA, Domain Filter)", price: 149 },
-  { key: "compliance", label: "Compliance & Audits (5 modules)", price: 249 },
+  { key: "voice", label: "Voice library (200+ voices, 32 languages)", price: 99 },
+  { key: "cloning", label: "Instant voice cloning + studio", price: 149 },
+  { key: "telephony", label: "Telephony (SIP, Twilio, numbers)", price: 129 },
+  { key: "analytics", label: "Analytics, transcripts, eval suite", price: 99 },
+  { key: "compliance", label: "Compliance (HIPAA, SOC 2, PCI redact)", price: 199 },
 ];
 
-const PLATFORM_FEE = 199; // monthly base
-const USER_PRICE = 8; // per endpoint user / month
-const REQ_PRICE_PER_100K = 49; // per 100K req/mo
-const VAPT_PRICE = 999; // one-time
+const PLATFORM_FEE = 99; // monthly base
+const USER_PRICE = 19; // per seat / month
+const REQ_PRICE_PER_100K = 89; // per 1K voice minutes/mo
+const VAPT_PRICE = 499; // one-time agent build service
 
 function PricingCalculator() {
   const [audience, setAudience] = useState<AudienceKey>("seriesA");
@@ -1880,38 +2966,33 @@ function PricingCalculator() {
   };
 
   return (
-    <section className="px-6 pt-4" id="calculator">
+    <section className="px-5 pt-4 sm:px-6" id="calculator">
       <div className="mx-auto max-w-[1180px]">
-        <p
-          className="text-center text-[12px] font-medium"
-          style={{ color: T.accent, letterSpacing: "-0.018px" }}
-        >
-          Pricing calculator
-        </p>
         <h2
-          className="mx-auto mt-4 max-w-[680px] text-balance text-center text-[32px] leading-[38px] tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
+          className="mx-auto max-w-[680px] text-balance text-center text-[28px] leading-[34px] tracking-[-0.7px] sm:text-[32px] sm:leading-[38px] sm:tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
           style={{
             fontFamily: T.fontDisplay,
             fontWeight: 500,
             color: T.ink,
           }}
         >
-          Pay only for the modules{" "}
-          <span style={{ color: T.accent }}>you turn on.</span>
+          Pay for the minutes your agents{" "}
+          <span style={{ color: T.accent }}>speak.</span>
         </h2>
         <p
-          className="mx-auto mt-3 max-w-[480px] text-center text-[14px] leading-[24px]"
+          className="mx-auto mt-3 max-w-[480px] text-pretty text-center text-[14px] leading-[24px]"
           style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
         >
           Drag the sliders, toggle the modules. The total updates as you go.
         </p>
 
-        {/* Audience tabs */}
-        <div className="mt-10 flex justify-center">
+        {/* Audience tabs — scroll horizontally on phone if needed, so the
+            four labels never wrap onto two lines. */}
+        <div className="mt-8 flex justify-center sm:mt-10">
           <div
             role="tablist"
             aria-label="Pricing audience"
-            className="inline-flex items-center gap-x-1 rounded-full p-1"
+            className="inline-flex max-w-full items-center gap-x-1 overflow-x-auto p-1"
             style={{ background: T.panel, boxShadow: E.ringOnly }}
           >
             {(Object.keys(AUDIENCE_DEFAULTS) as AudienceKey[]).map((k) => {
@@ -1922,7 +3003,7 @@ function PricingCalculator() {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setAudience(k)}
-                  className="rounded-full px-3.5 py-1.5 text-[13px] font-medium tracking-[-0.13px] transition-[background-color,color,box-shadow,scale] duration-200 ease-out active:scale-[0.96]"
+                  className=" px-3.5 py-1.5 text-[13px] font-medium tracking-[-0.13px] transition-[background-color,color,box-shadow,scale] duration-200 ease-out active:scale-[0.96]"
                   style={{
                     background: isActive ? T.surface : "transparent",
                     color: isActive ? T.accent : T.inkSoft,
@@ -1956,7 +3037,7 @@ function PricingCalculator() {
           <div className="relative grid lg:grid-cols-[1fr_1.2fr_1fr]">
             {/* Column 1: line items */}
             <div
-              className="flex flex-col gap-y-8 p-8 md:p-10"
+              className="flex flex-col gap-y-7 p-6 md:p-10"
               style={{
                 backgroundImage: `repeating-linear-gradient(to bottom, ${DASH.stroke} 0 4px, transparent 4px 10px)`,
                 backgroundSize: "1px 10px",
@@ -1967,28 +3048,28 @@ function PricingCalculator() {
               <CalcLineItem
                 label="Platform fee"
                 price={`$${PLATFORM_FEE}/mo`}
-                caption="Includes dashboard, evidence sync, audit portal."
+                caption="Studio, dashboard, transcripts, version history."
               />
               <CalcLineItem
-                label="Per endpoint user"
-                price={`$${USER_PRICE}/user/mo`}
-                caption="Antimalware, encryption, ZTNA, DLP per device."
+                label="Per builder seat"
+                price={`$${USER_PRICE}/seat/mo`}
+                caption="Anyone shipping or editing a production agent."
               />
               <CalcLineItem
-                label="Web & API traffic"
-                price={`$${REQ_PRICE_PER_100K}/100K req/mo`}
-                caption="WAF, API protection, bot blocking."
+                label="Voice minutes"
+                price={`$${REQ_PRICE_PER_100K}/1K min/mo`}
+                caption="Round-trip TTS + STT + LLM, billed per second."
               />
               <CalcLineItem
-                label="VAPT (one-time)"
+                label="Agent build (one-time)"
                 price={`$${VAPT_PRICE}`}
-                caption="OSCP-led, web + API + mobile, 7-day delivery."
+                caption="Our team builds, evals, and ships your first agent in 7 days."
               />
             </div>
 
             {/* Column 2: inputs — dotted product-mockup grid + dashed right divider */}
             <div
-              className="relative flex flex-col gap-y-7 p-8 md:p-10"
+              className="relative flex flex-col gap-y-7 p-6 md:p-10"
               style={{
                 background: T.panel,
                 // Layered backgrounds: dotted grid (mockup cell) + flat
@@ -2000,23 +3081,23 @@ function PricingCalculator() {
               }}
             >
               <CalcSlider
-                label="Endpoint users"
+                label="Builder seats"
                 value={users}
-                min={5}
-                max={500}
-                step={5}
+                min={1}
+                max={100}
+                step={1}
                 onChange={setUsers}
-                format={(v) => `${v} ${v === 1 ? "user" : "users"}`}
+                format={(v) => `${v} ${v === 1 ? "seat" : "seats"}`}
               />
               <CalcSlider
-                label="Web/API requests"
+                label="Voice minutes per month"
                 value={reqs}
-                min={100}
+                min={50}
                 max={2000}
                 step={50}
                 onChange={setReqs}
                 format={(v) =>
-                  v >= 1000 ? `${(v / 1000).toFixed(1)}M req/mo` : `${v}K req/mo`
+                  v >= 1000 ? `${(v / 1000).toFixed(1)}M min/mo` : `${v}K min/mo`
                 }
               />
 
@@ -2025,7 +3106,7 @@ function PricingCalculator() {
                   className="mb-3 text-[13px] font-medium"
                   style={{ color: T.ink, letterSpacing: "-0.13px" }}
                 >
-                  Module bundles
+                  Add-on modules
                 </p>
                 <ul className="space-y-2">
                   {MODULE_BUNDLES.map((m) => {
@@ -2033,7 +3114,7 @@ function PricingCalculator() {
                     return (
                       <li key={m.key}>
                         <label
-                          className="flex cursor-pointer items-center justify-between rounded-[10px] p-2.5 transition-colors hover:bg-black/[0.02]"
+                          className="flex cursor-pointer items-center justify-between  p-2.5 transition-colors hover:bg-black/[0.03]"
                           style={{
                             background: T.surface,
                             boxShadow: E.ringOnly,
@@ -2048,7 +3129,7 @@ function PricingCalculator() {
                             />
                             <span
                               aria-hidden
-                              className="flex h-4 w-4 items-center justify-center rounded-[5px] transition-[background-color,box-shadow] duration-200 ease-out"
+                              className="flex h-4 w-4 items-center justify-center  transition-[background-color,box-shadow] duration-200 ease-out"
                               style={{
                                 background: checked ? T.accent : T.surface,
                                 boxShadow: checked
@@ -2099,7 +3180,7 @@ function PricingCalculator() {
               </div>
 
               <label
-                className="flex cursor-pointer items-center justify-between rounded-[10px] p-3"
+                className="flex cursor-pointer items-center justify-between  p-3"
                 style={{
                   background: T.surface,
                   boxShadow: E.ringOnly,
@@ -2114,7 +3195,7 @@ function PricingCalculator() {
                   />
                   <span
                     aria-hidden
-                    className="flex h-4 w-4 items-center justify-center rounded-[5px] transition-[background-color,box-shadow] duration-200 ease-out"
+                    className="flex h-4 w-4 items-center justify-center  transition-[background-color,box-shadow] duration-200 ease-out"
                     style={{
                       background: vapt ? T.accent : T.surface,
                       boxShadow: vapt
@@ -2149,13 +3230,13 @@ function PricingCalculator() {
                         letterSpacing: "-0.14px",
                       }}
                     >
-                      Add OSCP-led VAPT
+                      Add white-glove agent build
                     </span>
                     <span
                       className="block text-[12px] leading-[16px]"
                       style={{ color: T.inkSubtle }}
                     >
-                      One-time engagement, 7-day delivery
+                      We build, eval, and tune your first agent in 7 days
                     </span>
                   </span>
                 </span>
@@ -2169,7 +3250,7 @@ function PricingCalculator() {
             </div>
 
             {/* Column 3: live total */}
-            <div className="flex flex-col gap-y-5 p-8 md:p-10">
+            <div className="flex flex-col gap-y-5 p-6 md:p-10">
               <p
                 className="text-[14px] font-medium leading-[20px]"
                 style={{ color: T.inkSubtle }}
@@ -2182,22 +3263,22 @@ function PricingCalculator() {
                 value={`$${(PLATFORM_FEE * 12).toLocaleString()}`}
               />
               <SummaryRow
-                label={`${users} endpoint ${users === 1 ? "user" : "users"} × 12`}
+                label={`${users} builder ${users === 1 ? "seat" : "seats"} × 12`}
                 value={`$${(userCost * 12).toLocaleString()}`}
               />
               <SummaryRow
-                label={`${reqs}K req/mo × 12`}
+                label={`${reqs}K voice min/mo × 12`}
                 value={`$${(reqCost * 12).toLocaleString()}`}
               />
               {modules.length > 0 && (
                 <SummaryRow
-                  label={`${modules.length} module ${modules.length === 1 ? "bundle" : "bundles"} × 12`}
+                  label={`${modules.length} add-on ${modules.length === 1 ? "module" : "modules"} × 12`}
                   value={`$${(moduleCost * 12).toLocaleString()}`}
                 />
               )}
               {vapt && (
                 <SummaryRow
-                  label="VAPT (one-time)"
+                  label="Agent build (one-time)"
                   value={`$${VAPT_PRICE.toLocaleString()}`}
                 />
               )}
@@ -2229,11 +3310,11 @@ function PricingCalculator() {
                 </span>
               </div>
               <p
-                className="text-[14px] leading-[20px]"
+                className="text-pretty text-[14px] leading-[20px]"
                 style={{ color: T.inkSubtle }}
               >
-                Annual billing · 2 months free vs monthly. Includes
-                onboarding, audit portal, and Slack support.
+                Annual billing · 2 months free vs monthly. Includes onboarding,
+                a shared Slack channel, and 24/7 ops&nbsp;support.
               </p>
 
               <div className="mt-2 flex flex-col gap-y-2">
@@ -2313,7 +3394,7 @@ function CalcSlider({
           {label}
         </label>
         <span
-          className="rounded-md px-2 py-0.5 text-[12px] font-medium tabular-nums"
+          className=" px-2 py-0.5 text-[12px] font-medium tabular-nums"
           style={{
             background: T.surface,
             boxShadow: E.ringOnly,
@@ -2363,19 +3444,19 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 // ─── Pricing — Platform + Custom ──────────────────────────────────────
 const PLATFORM_FEATURES = [
-  "Web App & API Protection (200K req/mo)",
-  "Web Scanner & Mobile App Scanner",
-  "Secure Server Access (ZTNA)",
-  "Security + Compliance + VAPT + Questionnaire",
-  "Up to 20 endpoint users",
+  "10,000 voice minutes / month included",
+  "200+ pre-built voices, 32 languages",
+  "Twilio, SIP, WebRTC, iOS & Android SDKs",
+  "Real-time transcripts, eval suite, sentiment",
+  "Up to 10 builder seats",
 ];
 
 const CUSTOM_FEATURES = [
-  "Unlimited requests & resources",
-  "Dedicated support",
-  "Custom integrations",
-  "Priority onboarding",
-  "SLA guarantee",
+  "Unlimited minutes & seats",
+  "Dedicated voice model fine-tunes",
+  "HIPAA BAA, SOC 2 Type II, EU residency",
+  "99.99% SLA + named on-call engineer",
+  "On-prem and self-hosted deployments",
 ];
 
 function Pricing() {
@@ -2383,8 +3464,8 @@ function Pricing() {
     <section className="px-6 pt-4" id="pricing">
       <div className="mx-auto max-w-[1180px]">
         <SectionHeading>
-          Start small. Add modules{" "}
-          <span style={{ color: T.accent }}>as you scale.</span>
+          Pricing scales with the{" "}
+          <span style={{ color: T.accent }}>minute</span>.
         </SectionHeading>
 
         <div
@@ -2397,22 +3478,22 @@ function Pricing() {
         >
           <PricingTier variant="elevated">
             <PriceLabel
-              name="Platform"
-              description="Growing teams and SaaS startups."
+              name="Studio"
+              description="Teams shipping their first production voice agent."
             />
             <PriceAmount
-              amount="$999"
+              amount="$299"
               cadence="/month"
-              footnote="$10,000 billed annually, 7-day free trial"
+              footnote="$2,990 billed annually, 10,000 minutes free"
             />
 
             <div
               className="flex flex-col sm:flex-row sm:items-center"
               style={{ marginTop: S.lg, gap: S.xs }}
             >
-              <BrandButton href="#">Book demo</BrandButton>
+              <BrandButton href="#">Start building</BrandButton>
               <GhostButton href="#" withCaret>
-                Start free trial
+                Talk to sales
               </GhostButton>
             </div>
 
@@ -2421,12 +3502,12 @@ function Pricing() {
 
           <PricingTier variant="flat">
             <PriceLabel
-              name="Custom"
-              description="Specific scope or scale."
+              name="Enterprise"
+              description="High volume, regulated industries, custom voices."
             />
             <PriceAmount
               amount="Let's talk"
-              footnote="Custom pricing tuned to your scope."
+              footnote="Volume-based pricing tuned to your call mix."
             />
 
             <div style={{ marginTop: S.lg }}>
@@ -2506,12 +3587,13 @@ function PricingTier({
 }) {
   const isElevated = variant === "elevated";
   return (
+    // Both variants share the same padding + structure so paragraphs,
+    // prices, buttons, and feature lists line up across the two tiers.
+    // The only thing the `flat` variant drops is the background fill
+    // and the elevation shadow — it reads as a ghost twin of the
+    // elevated card on the right side of the row.
     <article
-      className={
-        isElevated
-          ? "relative p-6 md:p-10"   // S.lg → S.cardPaddingLg
-          : "relative md:pl-2"        // flat: inherits page gutter, tiny optical inset on md
-      }
+      className="relative p-6 md:p-10"
       style={{
         background: isElevated ? T.surface : "transparent",
         boxShadow: isElevated ? E.cardElevated : E.cardFlat,
@@ -2589,31 +3671,31 @@ function PriceAmount({
   );
 }
 
-// ─── Why trust Osto — 3 credibility pillars ───────────────────────────
+// ─── Why trust Resonate — 3 credibility pillars ───────────────────────────
 function WhyTrust() {
   return (
     <section className="px-6 pt-4">
       <div className="mx-auto max-w-[1180px]">
         <SectionHeading>
-          Built by people who&apos;ve{" "}
-          <span style={{ color: T.accent }}>seen security fail.</span>
+          Built by speech{" "}
+          <span style={{ color: T.accent }}>researchers</span>, not prompt engineers.
         </SectionHeading>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           <TrustPillar
-            big="2×"
-            heading="Cybersecurity founders"
-            body="14+ years across network security, red teaming, and enterprise infrastructure. Security is all we&apos;ve ever done."
+            big="90 ms"
+            heading="Time to first byte"
+            body="Our TTS, STT, and turn-taking run on the same GPU stack, so your caller hears the first syllable before a stitched vendor pipeline finishes routing."
           />
           <TrustPillar
-            big="SOC 2 + ISO 27001"
-            heading="We run our own stack"
-            body="Every module we sell runs in our own platform. The certificate is a byproduct of real security, not the other way around."
+            big="32"
+            heading="Languages with native accents"
+            body="Agents speak Hindi, Spanish, Arabic, and Mandarin the way locals do, and they code-switch inside a single call without dropping context."
           />
           <TrustPillar
-            big="20+"
-            heading="Modules built in-house"
-            body="No third-party patchwork. Every module is built, maintained, and integrated by Osto. Full visibility, zero gaps between tools."
+            big="2M+"
+            heading="Conversations a day"
+            body="Production load across support, sales, and healthcare under a 99.99% uptime SLA. Our team answers the phone when you call too."
           />
         </div>
       </div>
@@ -2632,7 +3714,7 @@ function TrustPillar({
 }) {
   return (
     <article
-      className="rounded-2xl p-7"
+      className=" p-7"
       style={{ background: T.surface, boxShadow: E.card }}
     >
       <p
@@ -2646,7 +3728,7 @@ function TrustPillar({
         {big}
       </p>
       <h3
-        className="mt-4 text-[16px] font-medium leading-[24px]"
+        className="mt-4 text-balance text-[16px] font-medium leading-[24px]"
         style={{
           color: T.ink,
           fontFamily: T.fontDisplay,
@@ -2656,7 +3738,7 @@ function TrustPillar({
         {heading}
       </h3>
       <p
-        className="mt-2 text-[16px] leading-[24px]"
+        className="mt-2 max-w-[36ch] text-pretty text-[16px] leading-[24px]"
         style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
       >
         {body}
@@ -2668,39 +3750,39 @@ function TrustPillar({
 // ─── FAQ — collapsible questions ──────────────────────────────────────
 const FAQS: { q: string; a: string }[] = [
   {
-    q: "Are we too early as a startup to use Osto?",
-    a: "No. Most of our customers are seed to Series B. The earlier you start, the less retrofitting you do later. Platform pricing is built so a small team can afford full coverage from day one.",
+    q: "How does Resonate sound so realistic?",
+    a: "We trained our own streaming TTS and STT on a single GPU stack so the agent doesn't wait on a TTS vendor, an STT vendor, and an LLM in sequence. That collapses 1,400 ms of round-trips into ~90 ms time-to-first-byte, which is where callers stop hearing a robot.",
   },
   {
-    q: "How does Osto help us get SOC 2 or ISO 27001 ready?",
-    a: "Controls deploy live across your stack and start collecting their own evidence. Our team maps your existing setup to the framework, fills gaps with platform modules, and walks the auditor through the portal.",
+    q: "Can I bring my own LLM or knowledge base?",
+    a: "Yes. Resonate routes to OpenAI, Anthropic, Gemini, or any OpenAI-compatible endpoint, including your private fine-tunes. Knowledge base sources include Notion, Drive, Confluence, raw URLs, or your vector DB.",
   },
   {
-    q: "Do we need to hire a security engineer first?",
-    a: "No. Osto is the security team for most of our customers. Founders and CTOs onboard in under an hour and our engineers handle setup, evidence, and audit support end-to-end.",
+    q: "Does Resonate work over a phone number?",
+    a: "Out of the box. We provide telephony via SIP and Twilio, bring-your-own-carrier, and direct-dial numbers in 60+ countries. Web SDK, iOS, and Android cover everything else.",
   },
   {
-    q: "How is Osto different from Vanta or Oneleet?",
-    a: "Vanta and Oneleet are compliance dashboards. They tell you what controls you need, then expect you to buy and run them elsewhere. Osto is the security stack plus the compliance layer, in one platform with one invoice.",
+    q: "How is Resonate different from ElevenLabs, Cartesia, or Vapi?",
+    a: "ElevenLabs and Cartesia are great speech models — you still glue on STT, LLM, telephony, and evals. Vapi orchestrates third-party models with the latency penalty that brings. Resonate owns the full stack end-to-end, which is how we hold 90 ms TTFB under real production load.",
   },
   {
-    q: "What compliance frameworks does Osto cover?",
-    a: "SOC 2 Type I and II, ISO 27001, HIPAA, GDPR, and PCI-DSS readiness. Most customers run two or more of these in parallel from the same platform.",
+    q: "What about HIPAA, SOC 2, and PII?",
+    a: "SOC 2 Type II and HIPAA BAA available on Enterprise. PII redaction runs on the transcript stream before it hits logs. EU data residency is one toggle. We do not train on customer audio.",
   },
 ];
 
 function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section className="px-6 pt-4">
+    <section className="px-5 pt-4 sm:px-6">
       <div className="mx-auto max-w-[820px]">
         <SectionHeading>
-          Questions{" "}
-          <span style={{ color: T.accent }}>you probably have.</span>
+          Frequently{" "}
+          <span style={{ color: T.accent }}>asked.</span>
         </SectionHeading>
 
         <ul
-          className="mt-10 overflow-hidden rounded-2xl"
+          className="mt-10 overflow-hidden "
           style={{ background: T.surface, boxShadow: E.ringOnly }}
         >
           {FAQS.map((f, i) => {
@@ -2715,7 +3797,7 @@ function FAQ() {
               >
                 <button
                   onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex w-full items-start justify-between gap-x-4 px-6 py-5 text-left transition-colors hover:bg-black/[0.015]"
+                  className="flex w-full items-start justify-between gap-x-4 px-5 py-4 text-left transition-colors hover:bg-black/[0.03] sm:px-6 sm:py-5"
                   aria-expanded={isOpen}
                 >
                   <span
@@ -2756,7 +3838,7 @@ function FAQ() {
                   }}
                 >
                   <p
-                    className="overflow-hidden px-6 text-[16px] leading-[24px]"
+                    className="overflow-hidden px-5 text-pretty text-[15px] leading-[24px] sm:px-6 sm:text-[16px]"
                     style={{
                       color: T.inkSoft,
                       letterSpacing: "-0.24px",
@@ -2786,7 +3868,7 @@ function FinalCTA() {
     // negative vertical margins (cancels the spacer's 56px outer gap).
     <section className="relative">
       <div
-        className="relative overflow-hidden px-8 py-14 md:px-14 md:py-20"
+        className="relative overflow-hidden px-6 py-12 sm:px-8 sm:py-14 md:px-14 md:py-20"
         style={{
           background: BUTTON_BRAND_BG,
           marginLeft: RAIL_INSET,
@@ -2797,43 +3879,41 @@ function FinalCTA() {
       >
         <div className="text-center">
           <h1
-            className="mx-auto max-w-[720px] text-balance text-center text-white text-[40px] leading-[44px] tracking-[-1px] md:text-[56px] md:leading-[56px] md:tracking-[-1.4px]"
+            className="mx-auto max-w-[720px] text-balance text-center text-white text-[32px] leading-[36px] tracking-[-0.9px] sm:text-[40px] sm:leading-[44px] sm:tracking-[-1px] md:text-[56px] md:leading-[56px] md:tracking-[-1.4px]"
             style={{
               fontFamily: T.fontDisplay,
               fontWeight: 500,
             }}
           >
-            Stronger security now. Smoother audits later.
+            Your first live call is one afternoon away.
           </h1>
           <p
-            className="mx-auto mt-4 max-w-[560px] text-[16px] leading-[24px] md:text-[18px] md:leading-[26px]"
+            className="mx-auto mt-5 max-w-[520px] text-pretty text-[15px] leading-[24px] sm:text-[16px] md:text-[18px] md:leading-[28px]"
             style={{
-              color: "rgba(255,255,255,0.78)",
-              letterSpacing: "-0.24px",
+              color: "rgba(255,255,255,0.82)",
+              letterSpacing: "-0.012em",
             }}
           >
-            Cloud, app, endpoint, and network protection live in days. SOC 2
-            and ISO 27001 ready in weeks. One platform, one invoice.
+            10,000 free minutes get you through prototyping. After that
+            you pay only for the minutes your agent actually&nbsp;speaks.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-x-2">
-            <GhostButton href="#">Book a demo</GhostButton>
-            {/* Outline-on-dark variant — matches the shared button spec
-                (rounded-10, px-3 py-[6px], text-[13px], leading-[24px])
-                but with a white hairline + transparent fill so it reads
-                against the navy band. */}
+          {/* CTA pair — stacks on phone (full-width tap targets), goes
+              inline on sm+. */}
+          <div className="mt-8 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+            <GhostButton href="#">Try a live agent</GhostButton>
             <Link
               href="#"
-              className="inline-flex items-center gap-x-1.5 rounded-[10px] px-3 py-[6px] text-[13px] font-medium leading-[24px] tracking-[-0.13px] text-white transition-colors hover:bg-white/10"
+              className="inline-flex items-center justify-center gap-x-1.5 px-3 py-[6px] text-[13px] font-medium leading-[24px] tracking-[-0.13px] text-white transition-colors hover:bg-white/10"
               style={{
                 boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.22)",
               }}
             >
-              Start 7-day free trial
+              Get an API key
             </Link>
           </div>
 
           <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
-            {["SOC 2 Type II", "ISO 27001", "HIPAA", "OSCP-led VAPT"].map(
+            {["SOC 2 Type II", "HIPAA BAA", "GDPR", "PCI redaction"].map(
               (c) => (
                 <li
                   key={c}
@@ -2866,546 +3946,6 @@ function FinalCTA() {
   );
 }
 
-// ─── Quadrant grid (legacy, no longer composed) ───────────────────────
-function QuadrantGrid() {
-  return (
-    <section className="pt-20">
-      <SectionHeading>Valuable tools that power growing teams</SectionHeading>
-
-      <div className="mx-auto mt-10 max-w-[1180px] px-6">
-        <div className="grid md:grid-cols-2">
-          <QuadTile
-            title="Audit-ready in days, not quarters"
-            body="Our team runs the readiness work in our own platform — controls go live, evidence collects itself, and your SOC 2 deadline stops being a wall."
-            illustration={<IllusCertScene />}
-            border="r b"
-          />
-          <QuadTile
-            title="Global coverage. Live infrastructure."
-            body="We block threats across regions with 99.99% uptime, on infrastructure that spans every cloud you depend on."
-            illustration={<IllusGlobe />}
-            border="b"
-          />
-          <QuadTile
-            title="Endpoint posture, on every device"
-            body="Real-time antimalware, encryption, ZTNA, and DLP — all enrolled and reporting from the day a device joins the team."
-            illustration={<IllusEndpoint />}
-            border="r"
-          />
-          <QuadTile
-            title="OSCP-led penetration testing"
-            body="Real engineers, not scripts. Web + API + mobile assessment with retest and a diligence-ready report in 7 days."
-            illustration={<IllusVAPT />}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function QuadTile({
-  title,
-  body,
-  illustration,
-  border,
-}: {
-  title: string;
-  body: string;
-  illustration: React.ReactNode;
-  border?: string;
-}) {
-  // AG geometry: 400px tall, copy bottom-anchored, illustration absolute
-  // top, 0.5px hairlines using a pseudo-element via box-shadow rings.
-  const right = border?.includes("r");
-  const bottom = border?.includes("b");
-  return (
-    <article
-      className="relative flex h-[400px] flex-col justify-end overflow-hidden md:h-[440px]"
-      style={{
-        boxShadow: [
-          right ? `inset -0.5px 0 0 0 ${T.panelHairline}` : "",
-          bottom ? `inset 0 -0.5px 0 0 ${T.panelHairline}` : "",
-        ]
-          .filter(Boolean)
-          .join(", "),
-      }}
-    >
-      <div className="pointer-events-none absolute inset-0 select-none">
-        {illustration}
-      </div>
-      <div className="relative flex flex-col gap-y-2 px-4 pb-6 sm:px-6 lg:px-10">
-        <h3
-          className="font-medium"
-          style={{
-            fontFamily: T.fontDisplay,
-            color: T.ink,
-            fontSize: "18px",
-            lineHeight: "24px",
-            letterSpacing: "-0.27px",
-          }}
-        >
-          {title}
-        </h3>
-        <p
-          className="max-w-[520px] md:max-w-none"
-          style={{
-            color: T.inkSoft,
-            fontSize: "14px",
-            lineHeight: "24px",
-            letterSpacing: "-0.14px",
-          }}
-        >
-          {body}
-        </p>
-      </div>
-    </article>
-  );
-}
-
-// ─── Quadrant illustrations — original, AG style language ─────────────
-
-// 1. Compliance dossier scene (parallel to AG's stamp scene)
-function IllusCertScene() {
-  return (
-    <div className="flex justify-center pt-12 pr-5 sm:pr-[9px]">
-      <div className="relative w-full max-w-[406px]">
-        {/* Document card */}
-        <div
-          className="relative mx-auto w-[78%] rounded-[10px] p-4"
-          style={{ background: T.surface, boxShadow: E.card }}
-        >
-          <p
-            className="text-[12px] font-medium leading-[16px]"
-            style={{ color: T.inkSubtle }}
-          >
-            SOC 2 Type II · Readiness
-          </p>
-          <p
-            className="mt-1.5 text-[14px] font-medium leading-[20px]"
-            style={{ color: T.ink }}
-          >
-            142 controls auto-mapped
-          </p>
-          <div className="mt-3 space-y-1.5">
-            {[100, 86, 72].map((w, i) => (
-              <div
-                key={i}
-                className="h-1 w-full rounded-full"
-                style={{ background: T.panel }}
-              >
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${w}%`, background: T.accent }}
-                />
-              </div>
-            ))}
-          </div>
-          <p
-            className="mt-3 text-[10px]"
-            style={{ color: T.inkMid }}
-          >
-            CC6.1 access controls · live
-          </p>
-        </div>
-
-        {/* "Audit-ready" stamp */}
-        <div
-          className="absolute -right-1 top-2 flex h-[120px] w-[120px] -rotate-[14deg] items-center justify-center rounded-full"
-          style={{
-            border: `1.5px solid ${T.accent}`,
-            color: T.accent,
-          }}
-        >
-          <div className="text-center">
-            <p
-              className="text-[14px] font-medium leading-[16px]"
-              style={{ color: T.accent }}
-            >
-              Audit
-              <br />
-              Ready
-            </p>
-            <p
-              className="mt-1 text-[11px] font-medium leading-[14px]"
-              style={{ color: T.accent, opacity: 0.7 }}
-            >
-              06/2026
-            </p>
-          </div>
-          {/* Outer rotated ring text */}
-          <svg
-            className="absolute inset-0 animate-[spin_24s_linear_infinite]"
-            viewBox="0 0 120 120"
-            aria-hidden
-          >
-            <defs>
-              <path id="cs" d="M 60,60 m -52,0 a 52,52 0 1,1 104,0 a 52,52 0 1,1 -104,0" />
-            </defs>
-            <text style={{ fontSize: "8px", letterSpacing: "0.18em", fill: T.accent, opacity: 0.7 }}>
-              <textPath href="#cs">CERTIFIED · BY OSTO · CERTIFIED · BY OSTO · </textPath>
-            </text>
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 2. Globe — original SVG, AG composition (radial mask, ring, soft shadow)
-function IllusGlobe() {
-  return (
-    <div className="absolute inset-0">
-      {/* "All systems operational" label */}
-      <div className="absolute right-6 top-6 z-10 flex items-center gap-x-2">
-        <span
-          aria-hidden
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ background: T.accent }}
-        />
-        <p
-          className="text-[12px] font-medium"
-          style={{ color: T.accent, letterSpacing: "-0.018px" }}
-        >
-          All systems operational
-        </p>
-      </div>
-
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          WebkitMaskImage: "radial-gradient(75% 80% at 50% 25%, #000 27%, transparent 85%)",
-          maskImage: "radial-gradient(75% 80% at 50% 25%, #000 27%, transparent 85%)",
-        }}
-      >
-        <div className="absolute -bottom-[72px] left-1/2 h-[390px] w-[390px] -translate-x-1/2">
-          <div
-            className="absolute inset-0 overflow-hidden rounded-full"
-            style={{ boxShadow: E.globe }}
-          >
-            <SvgGlobe />
-          </div>
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{ border: `1.5px solid rgba(38,38,43,0.20)` }}
-          />
-          {/* Region pins */}
-          <Pin x={32} y={32} />
-          <Pin x={62} y={28} />
-          <Pin x={70} y={48} />
-          <Pin x={26} y={56} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SvgGlobe() {
-  // Lightweight SVG approximation of a globe — concentric latitude/longitude
-  // arcs in soft gray. Faithful to AG's silvered-globe look without three.js.
-  return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden>
-      <defs>
-        <radialGradient id="globeShade" cx="50%" cy="38%" r="58%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#f5f5f7" />
-          <stop offset="100%" stopColor="#dfe0e6" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="100" r="98" fill="url(#globeShade)" />
-      {/* Longitudes */}
-      {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((x) => (
-        <ellipse
-          key={`lon-${x}`}
-          cx="100"
-          cy="100"
-          rx={Math.abs(100 - x) * 0.95 + 2}
-          ry="98"
-          fill="none"
-          stroke={T.inkLine}
-          strokeWidth="0.5"
-          opacity="0.6"
-        />
-      ))}
-      {/* Latitudes */}
-      {[20, 40, 60, 80, 100, 120, 140, 160, 180].map((y) => (
-        <ellipse
-          key={`lat-${y}`}
-          cx="100"
-          cy="100"
-          rx="98"
-          ry={Math.abs(100 - y) * 0.95 + 2}
-          fill="none"
-          stroke={T.inkLine}
-          strokeWidth="0.5"
-          opacity="0.6"
-        />
-      ))}
-    </svg>
-  );
-}
-
-function Pin({ x, y }: { x: number; y: number }) {
-  return (
-    <span
-      className="absolute"
-      style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        width: "10px",
-        height: "10px",
-        transform: "translate(-50%, -50%)",
-      }}
-    >
-      <span
-        className="absolute inset-0 animate-ping rounded-full opacity-50"
-        style={{ background: T.accent }}
-      />
-      <span
-        className="absolute inset-[2px] rounded-full"
-        style={{
-          background: T.accent,
-          boxShadow: "0 0 0 1.5px white",
-        }}
-      />
-    </span>
-  );
-}
-
-// 3. Endpoint — phone mockup with credential card, AG composition
-function IllusEndpoint() {
-  return (
-    <div className="absolute inset-0 flex items-end justify-center pb-[72px]">
-      <div
-        className="relative h-[260px] w-[150px] overflow-hidden rounded-[28px] p-1.5"
-        style={{
-          background: T.surface,
-          boxShadow:
-            "0 0 0 1px rgba(38,38,43,0.10), 0 18px 32px -16px rgba(38,38,43,0.30)",
-        }}
-      >
-        <div
-          className="relative h-full w-full overflow-hidden rounded-[22px] p-3"
-          style={{ background: T.panel }}
-        >
-          {/* NFC indicator */}
-          <div className="flex justify-center">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M5 12a7 7 0 0 1 14 0M8 12a4 4 0 0 1 8 0M11 12a1 1 0 0 1 2 0"
-                stroke={T.inkMid}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          {/* Credential card */}
-          <div
-            className="mt-4 rounded-[12px] p-3"
-            style={{
-              background: `linear-gradient(135deg, ${T.btnTop}, ${T.btnBot})`,
-              boxShadow: E.buttonBrand,
-            }}
-          >
-            <p className="text-[10px] font-medium text-white/65 leading-[14px]">
-              Endpoint
-            </p>
-            <p className="mt-2 text-[12px] font-medium text-white leading-[16px]">
-              MacBook Pro · Encrypted
-            </p>
-            <p className="mt-0.5 text-[10px] text-white/65 leading-[14px]">
-              Active · Posture verified
-            </p>
-            <div className="mt-4 flex justify-end">
-              <span
-                aria-hidden
-                className="inline-block h-1.5 w-1.5 rounded-full"
-                style={{ background: "white" }}
-              />
-            </div>
-          </div>
-          {/* Status rows */}
-          <div className="mt-3 space-y-1.5">
-            {["Antimalware", "Encryption", "ZTNA"].map((s) => (
-              <div
-                key={s}
-                className="flex items-center justify-between rounded-[6px] px-2 py-1.5"
-                style={{ background: T.surface, boxShadow: E.ringOnly }}
-              >
-                <span
-                  className="text-[9px] font-medium"
-                  style={{ color: T.ink }}
-                >
-                  {s}
-                </span>
-                <span
-                  aria-hidden
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: "#19a974" }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 4. VAPT — phone mockup with findings list, AG composition
-function IllusVAPT() {
-  return (
-    <div className="absolute inset-0 flex items-end justify-center pb-[72px]">
-      <div
-        className="relative h-[260px] w-[150px] overflow-hidden rounded-[28px] p-1.5"
-        style={{
-          background: T.surface,
-          boxShadow:
-            "0 0 0 1px rgba(38,38,43,0.10), 0 18px 32px -16px rgba(38,38,43,0.30)",
-        }}
-      >
-        <div
-          className="relative h-full w-full overflow-hidden rounded-[22px] p-3"
-          style={{ background: T.panel }}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-medium leading-[14px]"
-              style={{ color: T.inkSubtle }}>
-              VAPT · Day 7
-            </p>
-            <span
-              className="rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-[14px]"
-              style={{ background: "rgba(40,93,245,0.10)", color: T.accent }}
-            >
-              Done
-            </span>
-          </div>
-          <p className="mt-2 text-[12px] font-medium leading-[16px]"
-            style={{ color: T.ink }}>
-            7 critical findings
-          </p>
-          <p className="text-[10px] leading-[14px]" style={{ color: T.inkSoft }}>
-            7 fixed · 0 open
-          </p>
-          <div className="mt-3 h-1 w-full overflow-hidden rounded-full"
-            style={{ background: T.surface, boxShadow: E.ringOnly }}>
-            <div className="h-full rounded-full"
-              style={{ width: "100%", background: T.accent }} />
-          </div>
-          <ul className="mt-3 space-y-1.5">
-            {[
-              "Auth bypass · /admin",
-              "SQLi · /search",
-              "Rate-limit miss · /login",
-              "TLS downgrade · staging",
-            ].map((f, i) => (
-              <li
-                key={i}
-                className="flex items-center gap-x-1.5 rounded-[6px] px-2 py-1.5"
-                style={{ background: T.surface, boxShadow: E.ringOnly }}
-              >
-                <span
-                  aria-hidden
-                  className="inline-block h-1 w-1 rounded-full"
-                  style={{ background: "#19a974" }}
-                />
-                <span className="truncate text-[8.5px]"
-                  style={{ color: T.ink }}>
-                  {f}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Testimonial block ────────────────────────────────────────────────
-function Testimonial() {
-  return (
-    <section className="px-6 pt-28">
-      <div className="mx-auto max-w-[820px] text-center">
-        <p
-          className="text-[24px] font-medium leading-[32px] tracking-[-0.6px] md:text-[30px] md:leading-[40px] md:tracking-[-0.75px]"
-          style={{ color: T.ink, fontFamily: T.fontDisplay }}
-        >
-          &ldquo;Osto stepped in when our Series A term sheet came with a
-          mandatory security checklist. Cloud posture from day one, full VAPT
-          end-to-end, all inside the investor timeline.&rdquo;
-        </p>
-        <div className="mt-6 flex items-center justify-center gap-x-3">
-          <div
-            className="h-9 w-9 rounded-full"
-            style={{ background: T.panel, boxShadow: E.ringOnly }}
-          />
-          <div className="text-left">
-            <p className="text-[13px] font-medium" style={{ color: T.ink }}>
-              Nitin Gupta
-            </p>
-            <p className="text-[12px]" style={{ color: T.inkSoft }}>
-              Co-founder &amp; CTO, Handpickd
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Stats panel — full-bleed dark band ───────────────────────────────
-function StatsPanel() {
-  return (
-    <section className="px-6 pt-28">
-      <div
-        className="mx-auto max-w-[1180px] overflow-hidden rounded-3xl px-8 py-12 md:px-14 md:py-16"
-        style={{ background: BUTTON_BRAND_BG }}
-      >
-        <div className="grid items-center gap-y-10 md:grid-cols-[1.4fr_1fr] md:gap-x-16">
-          <p
-            className="text-[24px] leading-[32px] tracking-[-0.6px] text-white md:text-[30px] md:leading-[38px] md:tracking-[-0.75px]"
-            style={{ fontFamily: T.fontDisplay }}
-          >
-            &ldquo;We can finally answer enterprise security reviews in
-            minutes, not weeks — and the audit evidence is already there.&rdquo;
-          </p>
-
-          <div className="flex flex-wrap gap-x-12 gap-y-6 md:justify-end">
-            <Stat number="7d" label="from kickoff to first audit-ready report" />
-            <Stat number="99%" label="of questionnaire questions auto-filled" />
-          </div>
-        </div>
-
-        <div className="mt-10 flex items-center gap-x-2">
-          <Link
-            href="#"
-            className="inline-flex items-center gap-x-1.5 rounded-[10px] px-3 py-1.5 text-[13px] font-medium tracking-[-0.13px] text-white transition-colors hover:bg-white/10"
-            style={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.22)" }}
-          >
-            See customer stories
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Stat({ number, label }: { number: string; label: string }) {
-  return (
-    <div>
-      <p
-        className="text-[36px] leading-[44px] tracking-[-0.9px] text-white"
-        style={{ fontFamily: T.fontDisplay, fontWeight: 500 }}
-      >
-        {number}
-      </p>
-      <p className="mt-1 max-w-[24ch] text-[13px] leading-[20px] text-white/75">
-        {label}
-      </p>
-    </div>
-  );
-}
-
 // ─── Footer ───────────────────────────────────────────────────────────
 function Footer() {
   return (
@@ -3414,7 +3954,7 @@ function Footer() {
     // copyright row gets generous breathing room.
     <footer className="relative">
       <div
-        className="px-8 pb-24 pt-12 md:px-12 md:pb-32 md:pt-14"
+        className="px-6 pb-20 pt-10 sm:px-8 sm:pb-24 sm:pt-12 md:px-12 md:pb-32 md:pt-14"
         style={{
           background: T.panel,
           marginLeft: RAIL_INSET,
@@ -3426,19 +3966,13 @@ function Footer() {
         {/* Top: brand block + 4 link columns */}
         <div className="grid gap-y-10 md:grid-cols-[1.4fr_2.6fr] md:gap-x-16">
           <div>
-            <Image
-              src="/osto-logo.png"
-              alt="Osto"
-              width={1163}
-              height={432}
-              className="h-[22px] w-auto"
-            />
+            <ResonateLogo size={22} />
             <p
-              className="mt-4 max-w-[40ch] text-[16px] leading-[24px]"
+              className="mt-4 max-w-[40ch] text-pretty text-[16px] leading-[24px]"
               style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
             >
-              One platform for cloud, app, endpoint, and network security,
-              with built-in compliance, VAPT, and security questionnaires.
+              The voice API for real-time, human-grade agents. Built by speech
+              researchers, shipped by&nbsp;developers.
             </p>
             <ul className="mt-6 flex items-center gap-x-3">
               {[
@@ -3479,7 +4013,7 @@ function Footer() {
                   <Link
                     href={s.href}
                     aria-label={s.label}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/[0.05]"
+                    className="inline-flex h-10 w-10 items-center justify-center  transition-colors hover:bg-black/[0.04]"
                     style={{
                       background: T.surface,
                       boxShadow: E.ringOnly,
@@ -3499,24 +4033,30 @@ function Footer() {
             <FooterColumn
               heading="Product"
               items={[
-                "Web App Protection",
-                "Cloud Posture (CSPM)",
-                "ZTNA Secure Access",
-                "Endpoint Antimalware",
-                "VAPT",
+                "Voice library",
+                "Voice cloning",
+                "Telephony & SDKs",
+                "Function calling",
+                "Evals & analytics",
               ]}
             />
             <FooterColumn
-              heading="Compliance"
-              items={["SOC 2", "ISO 27001", "HIPAA", "GDPR", "PCI-DSS"]}
+              heading="Use cases"
+              items={[
+                "Customer support",
+                "Outbound sales",
+                "Receptionist",
+                "Healthcare",
+                "Recruiting",
+              ]}
             />
             <FooterColumn
               heading="Company"
-              items={["About", "Pricing", "Customers", "Contact", "Blog"]}
+              items={["About", "Pricing", "Customers", "Careers", "Blog"]}
             />
             <FooterColumn
-              heading="Resources"
-              items={["Docs", "Changelog", "Trust center", "Status"]}
+              heading="Developers"
+              items={["Docs", "API reference", "Changelog", "Status"]}
             />
           </div>
         </div>
@@ -3530,11 +4070,11 @@ function Footer() {
             className="text-[12px]"
             style={{ color: T.inkSubtle, letterSpacing: "-0.018px" }}
           >
-            © 2026 Osto Cybersecurity Inc. All rights reserved.
+            © 2026 Resonate Voice, Inc. All rights reserved.
           </p>
           <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <CertChip>SOC 2 Type II</CertChip>
-            <CertChip>ISO 27001</CertChip>
+            <CertChip>HIPAA BAA</CertChip>
             <span
               className="hidden h-3 w-px md:inline-block"
               style={{ background: T.ring }}
@@ -3597,7 +4137,7 @@ function FooterColumn({
 function CertChip({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="inline-flex items-center gap-x-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-[20px]"
+      className="inline-flex items-center gap-x-1  px-2.5 py-0.5 text-[12px] font-medium leading-[20px]"
       style={{
         background: T.surface,
         boxShadow: E.ringOnly,
@@ -3745,9 +4285,9 @@ function Reveal({
 }
 
 function DashedGrid({ faint = false }: { faint?: boolean }) {
-  // Dashed grid frame — same visual language as AccessGrid's
-  // peripheral grid illustration. Cell size 44px to match V1 grid.
-  const stroke = faint ? "rgba(38,38,43,0.06)" : "rgba(38,38,43,0.10)";
+  // Dashed grid frame — peripheral architectural pattern. On light paper,
+  // the stroke is a faint dark so it reads as drafting rule.
+  const stroke = faint ? "rgba(10,10,16,0.04)" : "rgba(10,10,16,0.07)";
   return (
     <div
       aria-hidden
@@ -3885,10 +4425,39 @@ function DashedFrameDivider({
 function V2Styles() {
   return (
     <style>{`
-      [data-v2] :focus-visible {
+      :focus-visible {
         outline: 2px solid ${T.accent};
         outline-offset: 2px;
       }
+      :focus:not(:focus-visible) { outline: none; }
+
+      /* Hero waveform — each bar gently breathes its height. Per-bar
+         delay (set inline) creates a travelling wave effect. */
+      @keyframes resonateBarBreathe {
+        0%, 100% { transform: scaleY(1); }
+        50%      { transform: scaleY(0.45); }
+      }
+      .resonate-bar {
+        transform-origin: center;
+        animation: resonateBarBreathe 1800ms ease-in-out infinite;
+      }
+
+      /* Live indicator dot — slow saturation pulse with glow. */
+      @keyframes resonateLiveDotPulse {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0.55; }
+      }
+      .resonate-live-dot {
+        animation: resonateLiveDotPulse 1.8s ease-in-out infinite;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .resonate-bar,
+        .resonate-live-dot {
+          animation: none !important;
+        }
+      }
+
       /* Nav entrance — capsule drops in once on load */
       @keyframes ostoNavEnter {
         from {
@@ -3925,6 +4494,10 @@ function V2Styles() {
       }
       [data-osto-brand-btn]:hover {
         transform: translateY(-1px);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.30),
+          0 0 0 1px ${PALETTE.blueDark},
+          0 6px 18px -4px rgba(59,130,246,0.45);
       }
       [data-osto-brand-btn]:active {
         transform: translateY(0.5px);
@@ -3949,33 +4522,12 @@ function V2Styles() {
       a:hover > [data-osto-caret] {
         transform: translateX(2px);
       }
-      /* NavLink underline-on-hover */
-      [data-osto-nav-link] {
-        position: relative;
-      }
-      [data-osto-nav-link]::after {
-        content: "";
-        position: absolute;
-        left: 8px;
-        right: 8px;
-        bottom: 6px;
-        height: 1.5px;
-        background: ${T.ink};
-        transform: scaleX(0);
-        transform-origin: left;
-        transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-        border-radius: 1px;
-      }
-      [data-osto-nav-link]:hover::after {
-        transform: scaleX(1);
-      }
       @media (prefers-reduced-motion: reduce) {
         .osto-nav-enter,
         [data-osto-mega],
         [data-osto-brand-btn],
         [data-osto-ghost-btn],
-        [data-osto-caret],
-        [data-osto-nav-link]::after {
+        [data-osto-caret] {
           animation: none !important;
           transition: none !important;
         }
