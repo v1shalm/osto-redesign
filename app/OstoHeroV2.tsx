@@ -1054,105 +1054,183 @@ function MegaIcon({ kind }: { kind: MegaIconKey }) {
 
   switch (kind) {
     // ── PLATFORM ──
-    // Streaming voice → 5 vertical bars, center tallest (mini waveform).
+    // Streaming voice → 5 vertical bars, center tallest. On row hover
+    // each bar pulses its scaleY with a left→right stagger to suggest
+    // streaming audio.
     case "stream":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="3"  y="10" width="2.4" height="4"  fill={FG} />
-            <rect x="7"  y="7"  width="2.4" height="10" fill={FG} />
-            <rect x="11" y="4"  width="2.4" height="16" fill={FG} />
-            <rect x="15" y="7"  width="2.4" height="10" fill={FG} />
-            <rect x="19" y="10" width="2.4" height="4"  fill={FG} />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            {[
+              { x: 3,  y: 10, h: 4  },
+              { x: 7,  y: 7,  h: 10 },
+              { x: 11, y: 4,  h: 16 },
+              { x: 15, y: 7,  h: 10 },
+              { x: 19, y: 10, h: 4  },
+            ].map((b, i) => (
+              <rect
+                key={i}
+                className="osto-mi osto-mi-stream-bar"
+                x={b.x}
+                y={b.y}
+                width="2.4"
+                height={b.h}
+                fill={FG}
+                style={{
+                  transformOrigin: "center",
+                  animationDelay: `${i * 100}ms`,
+                }}
+              />
+            ))}
           </svg>
         </TileWrap>
       );
 
-    // Voice library → three stacked solid rows with a left rail.
+    // Voice library → three stacked solid rows. On hover the rows
+    // sweep in from the left with a top→down stagger like a list
+    // loading.
     case "voice-library":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4"  width="18" height="4" fill={FG} />
-            <rect x="3" y="10" width="18" height="4" fill={FG} opacity="0.85" />
-            <rect x="3" y="16" width="18" height="4" fill={FG} opacity="0.55" />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            {[
+              { y: 4,  o: 1    },
+              { y: 10, o: 0.85 },
+              { y: 16, o: 0.55 },
+            ].map((r, i) => (
+              <rect
+                key={i}
+                className="osto-mi osto-mi-row"
+                x="3"
+                y={r.y}
+                width="18"
+                height="4"
+                fill={FG}
+                opacity={r.o}
+                style={{
+                  animationDelay: `${i * 80}ms`,
+                  // The keyframe reads --row-o so the swept-in row
+                  // settles to its per-row opacity instead of 1.
+                  ["--row-o" as string]: `${r.o}`,
+                }}
+              />
+            ))}
           </svg>
         </TileWrap>
       );
 
-    // Telephony → solid handset shape (no thin line-art, just a bold
-    // silhouette that reads at thumb size).
+    // Telephony → solid handset. On hover the handset wiggles (small
+    // rotation) like an incoming call buzz.
     case "telephony":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <path
+              className="osto-mi osto-mi-phone"
               d="M5 4 L 9.5 4 L 11 8.5 L 8.5 10.5 Q 11 14.5 14 16 L 15.5 13.5 L 20 15 L 20 19 Q 11 19.5 5 13 Z"
               fill={FG}
+              style={{ transformOrigin: "center" }}
             />
           </svg>
         </TileWrap>
       );
 
-    // Evals → two solid bars + a peak indicator (analytics).
+    // Evals → three analytics bars climbing left→right. On hover the
+    // bars rise from baseline (scaleY 0→1) with a stagger.
     case "evals":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="4"  y="13" width="3.5" height="7" fill={FG} opacity="0.7" />
-            <rect x="10" y="9"  width="3.5" height="11" fill={FG} opacity="0.85" />
-            <rect x="16" y="5"  width="3.5" height="15" fill={FG} />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            {[
+              { x: 4,  y: 13, h: 7,  o: 0.7  },
+              { x: 10, y: 9,  h: 11, o: 0.85 },
+              { x: 16, y: 5,  h: 15, o: 1    },
+            ].map((b, i) => (
+              <rect
+                key={i}
+                className="osto-mi osto-mi-evals-bar"
+                x={b.x}
+                y={b.y}
+                width="3.5"
+                height={b.h}
+                fill={FG}
+                opacity={b.o}
+                style={{
+                  // Anchor at the bottom of each bar (bbox-local
+                  // bottom-center) so scaleY 0→1 rises from baseline.
+                  transformOrigin: "center bottom",
+                  animationDelay: `${i * 90}ms`,
+                }}
+              />
+            ))}
           </svg>
         </TileWrap>
       );
 
     // ── SOLUTIONS ──
-    // Customer support → solid speech bubble with tail.
+    // Customer support → speech bubble. On hover a quick pop/scale
+    // pulse from the tail's anchor like a new message arriving.
     case "support":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
             <path
+              className="osto-mi osto-mi-bubble"
               d="M4 5 H 20 V 16 H 10 L 6 20 V 16 H 4 Z"
               fill={FG}
+              style={{ transformOrigin: "12% 100%" }}
             />
           </svg>
         </TileWrap>
       );
 
-    // Outbound → bold right-arrow with stem (call going out).
+    // Outbound → arrow shaft + head. On hover the shaft + head
+    // translate forward then snap back.
     case "outbound":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M3 12 H 17" stroke={FG} strokeWidth="2.4" strokeLinecap="square" />
-            <path d="M14 6 L 21 12 L 14 18 Z" fill={FG} />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <g className="osto-mi osto-mi-arrow">
+              <path d="M3 12 H 17" stroke={FG} strokeWidth="2.4" strokeLinecap="square" />
+              <path d="M14 6 L 21 12 L 14 18 Z" fill={FG} />
+            </g>
           </svg>
         </TileWrap>
       );
 
-    // Healthcare → plus / cross shape (medical glyph).
+    // Healthcare → solid cross. On hover it rotates from -45° → 0
+    // like a stamp landing.
     case "healthcare":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="10" y="3"  width="4" height="18" fill={FG} />
-            <rect x="3"  y="10" width="18" height="4" fill={FG} />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <g className="osto-mi osto-mi-cross" style={{ transformOrigin: "center" }}>
+              <rect x="10" y="3"  width="4" height="18" fill={FG} />
+              <rect x="3"  y="10" width="18" height="4" fill={FG} />
+            </g>
           </svg>
         </TileWrap>
       );
 
-    // Receptionist → solid bell silhouette with clapper.
+    // Receptionist → bell with clapper. On hover the bell tilts
+    // left/right with the clapper swinging — ringing motion.
     case "receptionist":
       return (
         <TileWrap>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M5 16 Q 5 6 12 6 Q 19 6 19 16 Z"
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <g className="osto-mi osto-mi-bell" style={{ transformOrigin: "50% 0%" }}>
+              <path d="M5 16 Q 5 6 12 6 Q 19 6 19 16 Z" fill={FG} />
+              <rect x="4" y="16" width="16" height="2.4" fill={FG} />
+            </g>
+            <rect
+              className="osto-mi osto-mi-bell-clapper"
+              x="11"
+              y="19"
+              width="2"
+              height="2.4"
               fill={FG}
+              style={{ transformOrigin: "center top" }}
             />
-            <rect x="4" y="16" width="16" height="2.4" fill={FG} />
-            <rect x="11" y="19" width="2" height="2.4" fill={FG} />
           </svg>
         </TileWrap>
       );
@@ -4440,6 +4518,123 @@ function V2Styles() {
       @media (prefers-reduced-motion: reduce) {
         .resonate-bar,
         .resonate-live-dot {
+          animation: none !important;
+        }
+      }
+
+      /* ─── Mega-menu icon animations ─────────────────────────────────
+         Each icon has a signature hover motion that mirrors what the
+         item represents. Animations attach only inside the .group:hover
+         row state so they don't loop while the menu is closed; the .osto-mi
+         class on the inner shape is the animation target. transform-box:
+         fill-box makes transform-origin: center resolve to each shape's
+         own bbox instead of the SVG root, which is what we want for
+         per-bar scaleY and per-glyph rotation/scale. */
+      .osto-mi {
+        transform-box: fill-box;
+      }
+
+      /* Streaming voice — bars pulse scaleY left→right (audio cue). */
+      @keyframes ostoMiStreamBar {
+        0%, 100% { transform: scaleY(1); }
+        50%      { transform: scaleY(0.35); }
+      }
+      .group:hover .osto-mi-stream-bar {
+        animation: ostoMiStreamBar 900ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      /* Voice library — rows sweep in from the left, top→down stagger. */
+      @keyframes ostoMiRow {
+        0%   { transform: translateX(-22px); opacity: 0; }
+        60%  { opacity: var(--row-o, 1); }
+        100% { transform: translateX(0); opacity: var(--row-o, 1); }
+      }
+      .group:hover .osto-mi-row {
+        animation: ostoMiRow 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      /* Telephony — handset buzzes with a tight wiggle. */
+      @keyframes ostoMiPhone {
+        0%, 100% { transform: rotate(0); }
+        20%      { transform: rotate(-8deg); }
+        40%      { transform: rotate(8deg); }
+        60%      { transform: rotate(-5deg); }
+        80%      { transform: rotate(3deg); }
+      }
+      .group:hover .osto-mi-phone {
+        animation: ostoMiPhone 700ms cubic-bezier(0.4, 0, 0.6, 1);
+      }
+
+      /* Evals — bars rise from baseline with stagger. */
+      @keyframes ostoMiEvalsBar {
+        0%   { transform: scaleY(0); }
+        100% { transform: scaleY(1); }
+      }
+      .group:hover .osto-mi-evals-bar {
+        animation: ostoMiEvalsBar 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      /* Support — speech bubble pops from its tail anchor. */
+      @keyframes ostoMiBubble {
+        0%   { transform: scale(0.7); }
+        70%  { transform: scale(1.06); }
+        100% { transform: scale(1); }
+      }
+      .group:hover .osto-mi-bubble {
+        animation: ostoMiBubble 460ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      /* Outbound — arrow translates forward then snaps back. */
+      @keyframes ostoMiArrow {
+        0%   { transform: translateX(0); }
+        50%  { transform: translateX(3px); }
+        100% { transform: translateX(0); }
+      }
+      .group:hover .osto-mi-arrow {
+        animation: ostoMiArrow 560ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+      }
+
+      /* Healthcare — cross rotates from -45° to 0° like a stamp. */
+      @keyframes ostoMiCross {
+        0%   { transform: rotate(-45deg) scale(0.7); }
+        100% { transform: rotate(0) scale(1); }
+      }
+      .group:hover .osto-mi-cross {
+        animation: ostoMiCross 460ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      /* Receptionist — bell tilts side-to-side, clapper swings opposite. */
+      @keyframes ostoMiBell {
+        0%, 100% { transform: rotate(0); }
+        20%      { transform: rotate(-12deg); }
+        40%      { transform: rotate(10deg); }
+        60%      { transform: rotate(-6deg); }
+        80%      { transform: rotate(4deg); }
+      }
+      @keyframes ostoMiBellClap {
+        0%, 100% { transform: rotate(0); }
+        20%      { transform: rotate(14deg); }
+        40%      { transform: rotate(-12deg); }
+        60%      { transform: rotate(8deg); }
+        80%      { transform: rotate(-5deg); }
+      }
+      .group:hover .osto-mi-bell {
+        animation: ostoMiBell 720ms cubic-bezier(0.4, 0, 0.6, 1);
+      }
+      .group:hover .osto-mi-bell-clapper {
+        animation: ostoMiBellClap 720ms cubic-bezier(0.4, 0, 0.6, 1);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .group:hover .osto-mi-stream-bar,
+        .group:hover .osto-mi-row,
+        .group:hover .osto-mi-phone,
+        .group:hover .osto-mi-evals-bar,
+        .group:hover .osto-mi-bubble,
+        .group:hover .osto-mi-arrow,
+        .group:hover .osto-mi-cross,
+        .group:hover .osto-mi-bell,
+        .group:hover .osto-mi-bell-clapper {
           animation: none !important;
         }
       }
