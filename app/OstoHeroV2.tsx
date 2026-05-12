@@ -1460,7 +1460,7 @@ function Hero() {
 
       <div className="relative mx-auto max-w-[960px] text-center">
         <h1
-          className="text-balance"
+          className="osto-hero-rise text-balance"
           style={{
             fontFamily: T.fontDisplay,
             fontWeight: 500,
@@ -1474,6 +1474,7 @@ function Hero() {
             letterSpacing: "-0.035em",
             marginInline: "auto",
             maxWidth: 920,
+            animationDelay: "120ms",
           }}
         >
           The voice API for{" "}
@@ -1485,7 +1486,7 @@ function Hero() {
             money/timeline pitch moved to the trust line below. Slightly
             larger than before (17–20px) for more presence under the H1. */}
         <p
-          className="mx-auto text-pretty"
+          className="osto-hero-rise mx-auto text-pretty"
           style={{
             color: T.inkSoft,
             fontSize: "clamp(17px, 1.5vw, 20px)",
@@ -1493,6 +1494,7 @@ function Hero() {
             letterSpacing: "-0.012em",
             marginTop: 28,
             maxWidth: 580,
+            animationDelay: "240ms",
           }}
         >
           Streaming speech, function calling, and telephony in one SDK.
@@ -1504,8 +1506,8 @@ function Hero() {
             full-width tap target. Above sm they collapse back to an
             inline pair. */}
         <div
-          className="flex flex-col items-stretch justify-center sm:flex-row sm:items-center"
-          style={{ marginTop: 40, gap: S.sm }}
+          className="osto-hero-rise flex flex-col items-stretch justify-center sm:flex-row sm:items-center"
+          style={{ marginTop: 40, gap: S.sm, animationDelay: "360ms" }}
         >
           <BrandButton href="#" size="md">Try a live agent</BrandButton>
           <GhostButton href="#" size="md" withCaret>
@@ -1516,11 +1518,12 @@ function Hero() {
         {/* Trust line — small, quiet. Sits 20px under the CTAs so the
             buttons keep their breathing room. */}
         <p
-          className="mx-auto text-[13px] leading-[20px]"
+          className="osto-hero-rise mx-auto text-[13px] leading-[20px]"
           style={{
             color: T.inkSubtle,
             letterSpacing: "-0.02em",
             marginTop: 20,
+            animationDelay: "440ms",
           }}
         >
           10,000 free minutes. Pay-as-you-go after. No credit&nbsp;card.
@@ -1529,7 +1532,10 @@ function Hero() {
         {/* Hero waveform — the visual anchor. 32px on phone (tight so
             the strip lands above the first-viewport fold), 56px on
             tablet+ for desktop breathing room. */}
-        <div className="mt-8 sm:mt-14">
+        <div
+          className="osto-hero-rise mt-8 sm:mt-14"
+          style={{ animationDelay: "520ms" }}
+        >
           <HeroWaveform />
         </div>
       </div>
@@ -4475,6 +4481,32 @@ function V2Styles() {
         }
       }
 
+      /* Hero entrance — H1 → lead → CTAs → trust → wave rise + fade in
+         on page load. Each child sets its own animationDelay inline,
+         so the cascade reads as one orchestrated arrival rather than
+         five separate fades. */
+      @keyframes ostoHeroRise {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .osto-hero-rise {
+        opacity: 0;
+        animation: ostoHeroRise 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .osto-hero-rise {
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      }
+
       /* Nav entrance — capsule drops in once on load */
       @keyframes ostoNavEnter {
         from {
@@ -4517,7 +4549,10 @@ function V2Styles() {
           0 6px 18px -4px rgba(59,130,246,0.45);
       }
       [data-osto-brand-btn]:active {
-        transform: translateY(0.5px);
+        /* Press feedback: small scale down + return-to-rest Y so the
+           button feels physically clicked, not just shadow-shifted. */
+        transform: translateY(0) scale(0.97);
+        transition-duration: 80ms;
       }
       /* Ghost button hover lift + active press */
       [data-osto-ghost-btn] {
@@ -4529,7 +4564,8 @@ function V2Styles() {
         transform: translateY(-1px);
       }
       [data-osto-ghost-btn]:active {
-        transform: translateY(0.5px);
+        transform: translateY(0) scale(0.97);
+        transition-duration: 80ms;
       }
       /* Caret slides forward when its button is hovered */
       [data-osto-caret] {
