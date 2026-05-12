@@ -2428,7 +2428,7 @@ function ComparisonPanel({
     <article
       className={
         isBrand
-          ? "relative px-6 py-8 md:px-12 md:py-14 [box-shadow:inset_0_1px_0_rgba(255,255,255,0.10)] md:[box-shadow:inset_1px_0_0_rgba(255,255,255,0.10),inset_0_1px_0_rgba(255,255,255,0.10)]"
+          ? "relative overflow-hidden px-6 py-8 md:px-12 md:py-14 [box-shadow:inset_0_1px_0_rgba(255,255,255,0.10)] md:[box-shadow:inset_1px_0_0_rgba(255,255,255,0.10),inset_0_1px_0_rgba(255,255,255,0.10)]"
           : "relative px-6 py-8 md:px-12 md:py-14"
       }
       style={{
@@ -2436,84 +2436,92 @@ function ComparisonPanel({
         zIndex: isBrand ? 2 : 1,
       }}
     >
-      <p
-        className="text-[13px] font-medium leading-[20px]"
-        style={{ color: inkSubtle, letterSpacing: "-0.13px" }}
-      >
-        {label}
-      </p>
+      {/* Brand panel: dashed-rail pattern across the full card, faded
+          at the top so the label / title / metric stays the focal area
+          and the pattern thickens as you move down behind the timeline
+          and tags. Same drafting vocabulary as the FinalCTA rails. */}
+      {isBrand && <BrandPanelRailPattern />}
 
-      <h3
-        className="mt-2 max-w-[26ch] text-[20px] font-medium leading-[26px] md:text-[22px] md:leading-[28px]"
-        style={{
-          fontFamily: T.fontDisplay,
-          color: ink,
-          letterSpacing: "-0.36px",
-          textWrap: "balance",
-        }}
-      >
-        {title}
-      </h3>
-
-      <div className="mt-10">
+      <div className="relative z-10">
         <p
-          className="font-medium tabular-nums"
+          className="text-[13px] font-medium leading-[20px]"
+          style={{ color: inkSubtle, letterSpacing: "-0.13px" }}
+        >
+          {label}
+        </p>
+
+        <h3
+          className="mt-2 max-w-[26ch] text-[20px] font-medium leading-[26px] md:text-[22px] md:leading-[28px]"
           style={{
             fontFamily: T.fontDisplay,
             color: ink,
-            letterSpacing: isBrand ? "-2.2px" : "-1.4px",
-            fontSize: isBrand ? "clamp(48px, 6.4vw, 76px)" : "clamp(36px, 4.4vw, 52px)",
-            lineHeight: "1",
+            letterSpacing: "-0.36px",
+            textWrap: "balance",
           }}
         >
-          {metric}
-        </p>
-        <p
-          className="mt-3 text-[13px] leading-[20px]"
-          style={{ color: inkSoft, letterSpacing: "-0.13px" }}
-        >
-          {metricCaption}
-        </p>
-      </div>
+          {title}
+        </h3>
 
-      <div
-        className="mt-8 flex flex-wrap items-baseline gap-x-3 pt-4"
-        style={{ borderTop: `1px solid ${inkLine}` }}
-      >
-        <span
-          className="shrink-0 text-[18px] font-medium leading-[24px] md:text-[20px] md:leading-[26px]"
-          style={{
-            fontFamily: T.fontDisplay,
-            color: ink,
-            letterSpacing: "-0.4px",
-          }}
-        >
-          {timeline}
-        </span>
-        <span
-          className="text-[13px] leading-[20px]"
-          style={{ color: inkSoft, letterSpacing: "-0.13px" }}
-        >
-          {timelineCaption}
-        </span>
-      </div>
+        <div className="mt-10">
+          <p
+            className="font-medium tabular-nums"
+            style={{
+              fontFamily: T.fontDisplay,
+              color: ink,
+              letterSpacing: isBrand ? "-2.2px" : "-1.4px",
+              fontSize: isBrand ? "clamp(48px, 6.4vw, 76px)" : "clamp(36px, 4.4vw, 52px)",
+              lineHeight: "1",
+            }}
+          >
+            {metric}
+          </p>
+          <p
+            className="mt-3 text-[13px] leading-[20px]"
+            style={{ color: inkSoft, letterSpacing: "-0.13px" }}
+          >
+            {metricCaption}
+          </p>
+        </div>
 
-      <p
-        className="mt-7 text-[13px] leading-[20px]"
-        style={{ color: inkSoft, letterSpacing: "-0.13px" }}
-      >
-        <span className="mr-1.5 font-medium" style={{ color: inkSubtle }}>
-          {tagsLabel}
-        </span>
-        {tags.map((t, i) => (
-          <span key={t}>
-            <span style={{ color: ink, fontWeight: 500 }}>{t}</span>
-            {i < tags.length - 1 && (
-              <span style={{ color: inkSubtle }}>{", "}</span>
-            )}
+        <div
+          className="mt-8 flex flex-wrap items-baseline gap-x-3 pt-4"
+          style={{ borderTop: `1px solid ${inkLine}` }}
+        >
+          <span
+            className="shrink-0 text-[18px] font-medium leading-[24px] md:text-[20px] md:leading-[26px]"
+            style={{
+              fontFamily: T.fontDisplay,
+              color: ink,
+              letterSpacing: "-0.4px",
+            }}
+          >
+            {timeline}
           </span>
-        ))}
-      </p>
+          <span
+            className="text-[13px] leading-[20px]"
+            style={{ color: inkSoft, letterSpacing: "-0.13px" }}
+          >
+            {timelineCaption}
+          </span>
+        </div>
+
+        <p
+          className="mt-7 text-[13px] leading-[20px]"
+          style={{ color: inkSoft, letterSpacing: "-0.13px" }}
+        >
+          <span className="mr-1.5 font-medium" style={{ color: inkSubtle }}>
+            {tagsLabel}
+          </span>
+          {tags.map((t, i) => (
+            <span key={t}>
+              <span style={{ color: ink, fontWeight: 500 }}>{t}</span>
+              {i < tags.length - 1 && (
+                <span style={{ color: inkSubtle }}>{", "}</span>
+              )}
+            </span>
+          ))}
+        </p>
+      </div>
     </article>
   );
 }
@@ -3895,11 +3903,12 @@ function FinalCTA() {
           background: BUTTON_BRAND_BG,
         }}
       >
-        {/* Decorative AI-agent-graph patterns — left + right edges fade
-            inward so the headline stays the focal center. Hidden on
-            phone (the band is already tight). */}
-        <FinalCtaAgentPattern side="left" />
-        <FinalCtaAgentPattern side="right" />
+        {/* Decorative dashed-rail margins — same drafting/blueprint
+            vocabulary as the page-rails on light sections, transposed
+            to brand blue. Inner edge fades so the centered headline
+            stays the focal point. Hidden on phone (band is tight). */}
+        <FinalCtaRailPattern side="left" />
+        <FinalCtaRailPattern side="right" />
 
         <div className="relative z-10 text-center">
           <h1
@@ -3970,117 +3979,186 @@ function FinalCTA() {
   );
 }
 
-// ─── FinalCtaAgentPattern ─────────────────────────────────────────────
-// Decorative agent-graph: small white nodes connected by faint lines on
-// the brand-blue band, fading inward so the center text stays clean.
-// A few nodes pulse to suggest a live agent network. Hidden on phone.
-function FinalCtaAgentPattern({ side }: { side: "left" | "right" }) {
-  // Deterministic seeded RNG so node positions are stable between
-  // SSR + hydration and don't shift on rerender. Same mulberry32
-  // pattern used by the hero waveform.
-  const N = 18;
-  // Different seed per side so the two patterns aren't a mirror of
-  // each other.
-  let s = side === "left" ? 0x1f834a3b : 0x6c2d7e91;
-  const rand = () => {
-    s |= 0;
-    s = (s + 0x6d2b79f5) | 0;
-    let r = Math.imul(s ^ (s >>> 15), 1 | s);
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-  };
-  // Place nodes in a 4-column × N/4-row grid inside a 120×420 viewBox,
-  // with per-node jitter so they read as scattered, not a strict lattice.
-  const W = 120;
-  const H = 420;
-  const cols = 4;
-  const rows = Math.ceil(N / cols);
-  const nodes = Array.from({ length: N }, (_, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
-    const cx = ((c + 0.5) / cols) * W + (rand() - 0.5) * 14;
-    const cy = ((r + 0.5) / rows) * H + (rand() - 0.5) * 18;
-    // Active nodes pulse; the rest sit at low opacity.
-    const isActive = rand() > 0.72;
-    const radius = isActive ? 2.4 : 1.6;
-    return { cx, cy, isActive, radius, delay: Math.floor(rand() * 2400) };
-  });
-  // Connect each node to its nearest 1–2 neighbors so the graph reads
-  // as a network rather than scattered dots.
-  type Edge = { a: number; b: number };
-  const edges: Edge[] = [];
-  for (let i = 0; i < nodes.length; i++) {
-    // Find the two closest nodes by squared distance.
-    const dists = nodes
-      .map((n, j) => ({
-        j,
-        d:
-          (n.cx - nodes[i].cx) ** 2 +
-          (n.cy - nodes[i].cy) ** 2,
-      }))
-      .filter((x) => x.j !== i)
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 2);
-    for (const { j } of dists) {
-      // Dedupe by ordered pair so we don't draw both A→B and B→A.
-      const lo = Math.min(i, j);
-      const hi = Math.max(i, j);
-      if (!edges.some((e) => e.a === lo && e.b === hi)) {
-        edges.push({ a: lo, b: hi });
-      }
-    }
-  }
+// ─── BrandPanelRailPattern ────────────────────────────────────────────
+// Dashed-rail field that covers the entire "With Resonate" brand panel
+// in the ProblemSection. Same vocabulary as FinalCtaRailPattern (4px
+// dashes on 6px gaps, white-on-blue), weighted toward the right side
+// of the card: faint marks on the left ramping up to strong, drafting-
+// margin rails near the right edge. The text content on the left
+// stays the focal element.
+function BrandPanelRailPattern() {
+  // Vertical rails distributed across the panel; opacities ramp from
+  // very faint on the left up to strong on the right edge so the
+  // field reads as a directional gradient, not symmetric striping.
+  const verticals = [
+    { leftPct: 12, o: 0.05 },
+    { leftPct: 28, o: 0.08 },
+    { leftPct: 46, o: 0.12 },
+    { leftPct: 62, o: 0.20 },
+    { leftPct: 76, o: 0.28 },
+    { leftPct: 88, o: 0.36 },
+    { leftPct: 96, o: 0.44 },
+  ];
+  // Horizontal tick marks clustered toward the right half so they
+  // reinforce the weighted-right read. Widths vary so the gutter has
+  // visible corners.
+  const horizontals = [
+    { topPct: 18, leftPct: 64, widthPct: 32 },
+    { topPct: 38, leftPct: 56, widthPct: 40 },
+    { topPct: 62, leftPct: 70, widthPct: 26 },
+    { topPct: 82, leftPct: 58, widthPct: 38 },
+    { topPct: 92, leftPct: 76, widthPct: 20 },
+  ];
 
-  // Inward fade — the side closest to center fades to transparent.
+  // Horizontal fade-mask — pattern is barely there on the left (where
+  // the label / title / metric text lives), ramps through the middle,
+  // and is fully visible on the right edge.
   const fade =
-    side === "left"
-      ? "linear-gradient(to right, #000 0%, #000 55%, transparent 100%)"
-      : "linear-gradient(to left,  #000 0%, #000 55%, transparent 100%)";
+    "linear-gradient(to right, transparent 0%, transparent 32%, rgba(0,0,0,0.55) 56%, #000 80%, #000 100%)";
+
+  const vDash = (o: number) =>
+    `repeating-linear-gradient(to bottom, rgba(255,255,255,${o}) 0 4px, transparent 4px 10px)`;
+  const hDash = (o: number) =>
+    `repeating-linear-gradient(to right, rgba(255,255,255,${o}) 0 4px, transparent 4px 10px)`;
 
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-y-0 z-0 hidden w-[120px] md:block lg:w-[140px]"
+      className="pointer-events-none absolute inset-0 z-0"
+      style={{
+        WebkitMaskImage: fade,
+        maskImage: fade,
+      }}
+    >
+      {verticals.map((v) => (
+        <span
+          key={v.leftPct}
+          className="absolute top-0 bottom-0"
+          style={{
+            left: `${v.leftPct}%`,
+            width: 1,
+            backgroundImage: vDash(v.o),
+            backgroundRepeat: "repeat-y",
+          }}
+        />
+      ))}
+      {horizontals.map((h) => (
+        <span
+          key={`${h.topPct}-${h.leftPct}`}
+          className="absolute"
+          style={{
+            top: `${h.topPct}%`,
+            left: `${h.leftPct}%`,
+            width: `${h.widthPct}%`,
+            height: 1,
+            backgroundImage: hDash(0.22),
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── FinalCtaRailPattern ──────────────────────────────────────────────
+// Decorative dashed page-rails transposed to the brand-blue band. Same
+// drafting-margin vocabulary used by the light-page PageRails: vertical
+// dashed lines at decreasing opacity stepping inward, plus a single
+// horizontal hairline at top and bottom that anchors the rails. A
+// single tick ("scanner head") slides down the brightest rail on a
+// slow loop. Inner edge fades so the headline stays the focal point.
+function FinalCtaRailPattern({ side }: { side: "left" | "right" }) {
+  // Each rail is a vertical dashed line. Five lines per side, stepping
+  // inward; the outermost is brightest, the innermost is the faintest.
+  // Distance from the outer edge in px — small enough to read as a
+  // "drafting gutter," large enough to register on a 1280px viewport.
+  const rails = [
+    { x: 12, o: 0.36 }, // outermost
+    { x: 24, o: 0.26 },
+    { x: 44, o: 0.18 },
+    { x: 72, o: 0.12 },
+    { x: 108, o: 0.07 }, // innermost, almost gone before the fade kicks in
+  ];
+
+  // Short horizontal tick-marks at four heights inside the gutter, like
+  // the ruling marks on an architectural drafting sheet. They span the
+  // rail field (≈100px wide) and use the same dashed pattern as the
+  // verticals.
+  const ticks = [
+    { topPct: 18, w: 96 },
+    { topPct: 38, w: 64 },
+    { topPct: 62, w: 64 },
+    { topPct: 82, w: 96 },
+  ];
+
+  // Inward fade so the rails dissolve into the brand band before the
+  // centered text region.
+  const fade =
+    side === "left"
+      ? "linear-gradient(to right, #000 0%, #000 60%, transparent 100%)"
+      : "linear-gradient(to left,  #000 0%, #000 60%, transparent 100%)";
+
+  // Dashed-line background: 4px dash + 6px gap, white at the rail's
+  // declared opacity. Repeating-linear-gradient renders the dashes; we
+  // use a fixed background-size so the dash count is predictable.
+  const dashedBg = (opacity: number) =>
+    `repeating-linear-gradient(to bottom, rgba(255,255,255,${opacity}) 0 4px, transparent 4px 10px)`;
+
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 z-0 hidden w-[140px] md:block lg:w-[160px]"
       style={{
         [side]: 0,
         WebkitMaskImage: fade,
         maskImage: fade,
       }}
     >
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        height="100%"
-        preserveAspectRatio="xMidYMid slice"
-        style={{ display: "block" }}
-      >
-        {/* Edges */}
-        {edges.map((e, i) => (
-          <line
-            key={`e-${i}`}
-            x1={nodes[e.a].cx}
-            y1={nodes[e.a].cy}
-            x2={nodes[e.b].cx}
-            y2={nodes[e.b].cy}
-            stroke="#ffffff"
-            strokeWidth="0.6"
-            opacity="0.22"
-          />
-        ))}
-        {/* Nodes */}
-        {nodes.map((n, i) => (
-          <circle
-            key={`n-${i}`}
-            className={n.isActive ? "osto-cta-node osto-cta-node-pulse" : "osto-cta-node"}
-            cx={n.cx}
-            cy={n.cy}
-            r={n.radius}
-            fill="#ffffff"
-            opacity={n.isActive ? 0.95 : 0.55}
-            style={{ animationDelay: `${n.delay}ms` }}
-          />
-        ))}
-      </svg>
+      {/* Vertical dashed rails */}
+      {rails.map((r) => (
+        <span
+          key={r.x}
+          className="absolute top-0 bottom-0"
+          style={{
+            [side]: `${r.x}px`,
+            width: 1,
+            backgroundImage: dashedBg(r.o),
+            backgroundRepeat: "repeat-y",
+          }}
+        />
+      ))}
+
+      {/* Horizontal tick marks at four heights spanning the rail
+          gutter — drafting-sheet ruling, anchors the verticals and
+          echoes the dashed section dividers used elsewhere on the
+          site. Outer ticks (closer to top/bottom edges) are wider so
+          the gutter has visible corners. */}
+      {ticks.map((t) => (
+        <span
+          key={t.topPct}
+          className="absolute"
+          style={{
+            [side]: 12,
+            width: t.w,
+            top: `${t.topPct}%`,
+            height: 1,
+            backgroundImage: `repeating-linear-gradient(to right, rgba(255,255,255,0.22) 0 4px, transparent 4px 10px)`,
+          }}
+        />
+      ))}
+
+      {/* Scanner tick — a short bright segment that slides down the
+          outermost rail on a slow loop. Reads as a printer head /
+          live-scan cue without resorting to AI-startup glyphs. */}
+      <span
+        className="osto-cta-rail-tick absolute"
+        style={{
+          [side]: 12,
+          width: 1,
+          height: 24,
+          background:
+            "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%)",
+        }}
+      />
     </div>
   );
 }
@@ -4643,19 +4721,26 @@ function V2Styles() {
         }
       }
 
-      /* ─── FinalCTA agent-graph nodes ─────────────────────────────────
-         Active nodes pulse opacity to suggest a live agent network;
-         the inactive nodes sit at low opacity as static structure. */
-      @keyframes ostoCtaNodePulse {
-        0%, 100% { opacity: 0.95; }
-        50%      { opacity: 0.35; }
+      /* ─── FinalCTA rail-tick scanner ─────────────────────────────────
+         A short bright vertical segment slides down the outermost rail
+         of the FinalCtaRailPattern. The element is positioned at top
+         and the keyframe translates it the full container height,
+         falling out the bottom before resetting. ease-in-out gives the
+         scan a hand-cranked feel rather than a robotic constant speed. */
+      @keyframes ostoCtaRailTick {
+        0%   { transform: translateY(-24px); opacity: 0; }
+        8%   { opacity: 1; }
+        92%  { opacity: 1; }
+        100% { transform: translateY(420px); opacity: 0; }
       }
-      .osto-cta-node-pulse {
-        animation: ostoCtaNodePulse 2200ms ease-in-out infinite;
+      .osto-cta-rail-tick {
+        top: 0;
+        animation: ostoCtaRailTick 5200ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
       @media (prefers-reduced-motion: reduce) {
-        .osto-cta-node-pulse {
+        .osto-cta-rail-tick {
           animation: none !important;
+          opacity: 0 !important;
         }
       }
 
