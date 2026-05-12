@@ -516,7 +516,7 @@ function NavBar() {
     >
       <div className="relative mx-auto flex max-w-[940px] items-center justify-between gap-x-12">
         <nav
-          className="flex w-full items-center justify-between gap-x-12 py-1.5 pl-5 pr-1.5 backdrop-blur transition-shadow duration-200"
+          className="flex w-full items-center justify-between gap-x-12 py-1.5 pl-5 pr-2 backdrop-blur transition-shadow duration-200"
           style={{
             background: "rgba(255,255,255,0.78)",
             boxShadow: E.navCapsule,
