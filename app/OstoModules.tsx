@@ -80,11 +80,11 @@ const RAIL_STROKE = PALETTE.ring;
 export function OstoModules() {
   return (
     <section className="pt-4" style={{ color: T.ink }}>
-      {/* Heading — left-aligned for consistency with the rest of the
-          section headings on the page. */}
-      <div className="mx-auto max-w-[1240px] px-5 sm:px-6">
+      {/* Heading — left-aligned on phone (matches the page's mobile
+          column reading off the left rail), centered marquee on md+. */}
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-6 md:text-center">
         <h2
-          className="max-w-[780px] text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[44px] md:leading-[48px] md:tracking-[-1.1px]"
+          className="max-w-[780px] text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:mx-auto md:text-[44px] md:leading-[48px] md:tracking-[-1.1px]"
           style={{
             fontFamily: "var(--font-sans)",
             fontWeight: 500,
@@ -95,7 +95,7 @@ export function OstoModules() {
           handled inside one&nbsp;<span style={{ color: BRAND }}>SDK</span>.
         </h2>
         <p
-          className="mt-5 max-w-[560px] text-pretty text-[16px] leading-[24px] md:text-[17px] md:leading-[26px]"
+          className="mt-5 max-w-[560px] text-pretty text-[16px] leading-[24px] md:mx-auto md:text-[17px] md:leading-[26px]"
           style={{ color: T.inkSoft, letterSpacing: "-0.18px" }}
         >
           Streaming speech, voice cloning, turn-taking, and bi-directional

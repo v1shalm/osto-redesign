@@ -2351,7 +2351,7 @@ function ProblemSection() {
           <span style={{ color: T.accent }}>months.</span>
         </SectionHeading>
         <p
-          className="mt-4 max-w-[600px] text-pretty text-[15px] leading-[24px]"
+          className="mt-4 max-w-[600px] text-pretty text-[15px] leading-[24px] md:mx-auto md:text-center"
           style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
         >
           You wire up a TTS vendor, an STT vendor, an LLM, and a telephony
@@ -2994,7 +2994,7 @@ function PricingCalculator() {
     <section className="px-5 pt-4 sm:px-6" id="calculator">
       <div className="mx-auto max-w-[1180px]">
         <h2
-          className="max-w-[680px] text-balance text-[28px] leading-[34px] tracking-[-0.7px] sm:text-[32px] sm:leading-[38px] sm:tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
+          className="max-w-[680px] text-balance text-[28px] leading-[34px] tracking-[-0.7px] sm:text-[32px] sm:leading-[38px] sm:tracking-[-0.8px] md:mx-auto md:text-center md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
           style={{
             fontFamily: T.fontDisplay,
             fontWeight: 500,
@@ -3005,15 +3005,15 @@ function PricingCalculator() {
           <span style={{ color: T.accent }}>speak.</span>
         </h2>
         <p
-          className="mt-3 max-w-[480px] text-pretty text-[14px] leading-[24px]"
+          className="mt-3 max-w-[480px] text-pretty text-[14px] leading-[24px] md:mx-auto md:text-center"
           style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
         >
           Drag the sliders, toggle the modules. The total updates as you go.
         </p>
 
-        {/* Audience tabs — scroll horizontally on phone if needed, so the
-            four labels never wrap onto two lines. */}
-        <div className="mt-8 flex justify-start sm:mt-10">
+        {/* Audience tabs — left-aligned on phone to flow with the
+            heading, centered on md+ when the heading sits as a marquee. */}
+        <div className="mt-8 flex justify-start sm:mt-10 md:justify-center">
           <div
             role="tablist"
             aria-label="Pricing audience"
@@ -4374,13 +4374,16 @@ function CertChip({ children }: { children: React.ReactNode }) {
 
 // ─── Shared primitives ────────────────────────────────────────────────
 /**
- * SectionHeading — H2 always left-aligned. Used by every section that
- * doesn't bring its own H2 styling.
+ * SectionHeading — H2 used by every section that doesn't bring its own
+ * H2 styling. Left-aligned on phone (matches the rest of the mobile
+ * column where copy reads off the left rail), centered on md+ where
+ * the section has room to breathe and the title sits as a marquee
+ * above its content.
  */
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="text-balance"
+      className="text-balance md:text-center md:px-10"
       style={{
         fontFamily: T.fontDisplay,
         fontWeight: 500,
