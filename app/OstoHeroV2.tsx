@@ -3867,10 +3867,10 @@ function FinalCTA() {
           {/* CTA pair — stacks on phone (full-width tap targets), goes
               inline on sm+. */}
           <div className="mt-8 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
-            <GhostButton href="#">Try a live agent</GhostButton>
+            <GhostButton href="#" size="md">Try a live agent</GhostButton>
             <Link
               href="#"
-              className="inline-flex items-center justify-center gap-x-1.5 px-3 py-[6px] text-[13px] font-medium leading-[24px] tracking-[-0.13px] text-white transition-colors hover:bg-white/10"
+              className="osto-btn-tall inline-flex items-center justify-center gap-x-1.5 px-4 py-[10px] text-[15px] font-medium leading-[20px] tracking-[-0.15px] text-white transition-colors hover:bg-white/10"
               style={{
                 boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.22)",
               }}
