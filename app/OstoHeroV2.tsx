@@ -1370,11 +1370,15 @@ function BrandButton({
   size?: ButtonSize;
 }) {
   const s = BTN_SIZE[size];
+  // md gets a phone-only tall tap target (48px min-height) — Apple HIG
+  // and Google Material both want ≥44; the hero CTAs at 40 felt
+  // squished against the headline.
+  const tallClass = size === "md" ? "osto-btn-tall" : "";
   return (
     <Link
       href={href}
       data-osto-brand-btn
-      className="inline-flex items-center justify-center text-white"
+      className={`inline-flex items-center justify-center text-white ${tallClass}`}
       style={{
         ...s.type,
         background: BUTTON_BRAND_BG,
@@ -1403,11 +1407,12 @@ function GhostButton({
 }) {
   const s = BTN_SIZE[size];
   const caret = size === "md" ? 14 : 12;
+  const tallClass = size === "md" ? "osto-btn-tall" : "";
   return (
     <Link
       href={href}
       data-osto-ghost-btn
-      className="inline-flex items-center justify-center"
+      className={`inline-flex items-center justify-center ${tallClass}`}
       style={{
         ...s.type,
         background: T.surface,
@@ -4391,6 +4396,20 @@ function V2Styles() {
         outline-offset: 2px;
       }
       :focus:not(:focus-visible) { outline: none; }
+
+      /* md-size buttons get a 52px min-height on phone for a comfortable
+         thumb target — 40px (the inline padY: 10 default) looks squished
+         against the H1 on phones. Tablet/desktop fall back to the
+         original 40px so the buttons stay proportional next to body
+         text. */
+      .osto-btn-tall {
+        min-height: 52px;
+      }
+      @media (min-width: 640px) {
+        .osto-btn-tall {
+          min-height: 0;
+        }
+      }
 
       /* Rail-bound panels (HowItWorks, ProblemSection panels, Pricing
          Calculator, FinalCTA, Footer) — full-bleed on phone, rail-inset
