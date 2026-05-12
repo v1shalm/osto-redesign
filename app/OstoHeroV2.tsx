@@ -1448,7 +1448,7 @@ function Hero() {
   return (
     <section
       className="relative px-5 sm:px-6"
-      style={{ paddingTop: "clamp(96px, 16vw, 200px)" }}
+      style={{ paddingTop: "clamp(140px, 18vw, 200px)" }}
     >
       {/* Hero is intentionally quiet — page rails and the section's own
           dashed-grid frame provide all the structure. No ambient glow. */}
@@ -1521,10 +1521,10 @@ function Hero() {
           10,000 free minutes. Pay-as-you-go after. No credit&nbsp;card.
         </p>
 
-        {/* Hero waveform — the visual anchor. 56px of air separates the
-            quiet trust line from the live audio strip so the strip reads
-            as its own object, not a footnote. */}
-        <div style={{ marginTop: 56 }}>
+        {/* Hero waveform — the visual anchor. 32px on phone (tight so
+            the strip lands above the first-viewport fold), 56px on
+            tablet+ for desktop breathing room. */}
+        <div className="mt-8 sm:mt-14">
           <HeroWaveform />
         </div>
       </div>
@@ -1585,10 +1585,11 @@ function HeroWaveform() {
       className="relative mx-auto"
       style={{
         // Stage = cluster width on desktop (~896px). Shrinks on phone
-        // so the wave stays inside the viewport. Mobile lifted to a
-        // 180px floor so the strip is unmissable on phones.
+        // so the wave stays inside the viewport. Mobile sized so the
+        // strip lands above the first-viewport fold once the hero has
+        // its full paddingTop applied.
         width: "clamp(320px, 96vw, 960px)",
-        height: "clamp(180px, 28vw, 220px)",
+        height: "clamp(140px, 24vw, 220px)",
       }}
     >
       <div

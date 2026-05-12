@@ -191,7 +191,7 @@ function BentoCell({
 
   return (
     <article
-      className="relative flex min-h-[500px] flex-col overflow-hidden sm:min-h-[440px]"
+      className="relative flex min-h-[440px] flex-col overflow-hidden"
       style={{
         boxShadow: shadows.join(", "),
       }}
@@ -231,15 +231,13 @@ function BentoCopy({
 }
 
 function BentoIllusContainer({ children }: { children: React.ReactNode }) {
-  // On phone the SVG viewBox is 600×220 (~2.7:1). With preserveAspectRatio
-  // = "meet" the SVG fits to the narrower container width and ends up
-  // surrounded by empty space. We solve it with osto-bento-illus on the
-  // wrapper, which on phones scales the inner SVG up so it fills the
-  // 320px-tall container vertically and crops slightly on the sides
-  // (the artwork is centered in its viewBox, so the card and waveform
-  // stay readable). Desktop falls back to the original fit-to-box.
+  // 260px tall on every breakpoint. On phones the inner SVG (600×220
+  // viewBox) is then scaled up ~1.7× via the .osto-bento-illus CSS
+  // hook so the artwork visually fills the cell instead of collapsing
+  // to a thin fit-to-width strip; overflow-hidden here crops the
+  // horizontal overflow.
   return (
-    <div className="osto-bento-illus relative mt-auto h-[320px] w-full overflow-hidden sm:h-[260px]">
+    <div className="osto-bento-illus relative mt-auto h-[260px] w-full overflow-hidden">
       {children}
     </div>
   );
@@ -1125,22 +1123,22 @@ function IllusConversation({ accent }: { accent: string }) {
 export function OstoModulesStyles() {
   return (
     <style>{`
-      /* Bento illustration sizing on phone — scale the inner SVG so it
-         fills the container vertically. The SVG viewBox is 600×220
-         (~2.7:1); without this the SVG fits-to-width and ends up half
-         the container's height. xMidYMid keeps the artwork centered
-         when the sides crop. Also zero the wrapper's px-4 padding so
-         the SVG can render edge-to-edge inside the bento cell. */
+      /* Bento illustration sizing on phone — the SVG viewBox is 600×220
+         (~2.7:1) so preserveAspectRatio="meet" inside a phone-width
+         container collapses the SVG to ~140px tall, leaving the rest
+         of the 320px container empty. Solution: zero the wrapper's
+         padding and scale the SVG up (~1.6×) via transform so it
+         visually fills more of the cell. overflow-hidden on the bento
+         cell crops the horizontal overflow; the viewBox is centered so
+         cropping is symmetric and the card / waveform stay readable. */
       @media (max-width: 639px) {
         .osto-bento-illus > div {
           padding-left: 0 !important;
           padding-right: 0 !important;
         }
         .osto-bento-illus svg {
-          width: auto !important;
-          height: 100% !important;
-          min-width: 100%;
-          max-width: none;
+          transform: scale(1.7);
+          transform-origin: center;
         }
       }
 
