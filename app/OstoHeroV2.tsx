@@ -2958,7 +2958,7 @@ function PricingCalculator() {
 
         {/* Audience tabs — scroll horizontally on phone if needed, so the
             four labels never wrap onto two lines. */}
-        <div className="mt-8 flex justify-center sm:mt-10">
+        <div className="mt-8 flex justify-start sm:mt-10">
           <div
             role="tablist"
             aria-label="Pricing audience"

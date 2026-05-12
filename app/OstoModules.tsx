@@ -231,13 +231,15 @@ function BentoCopy({
 }
 
 function BentoIllusContainer({ children }: { children: React.ReactNode }) {
-  // Mobile illustration zone is taller than the desktop one because the
-  // SVGs use viewBox aspect ratios closer to 2.7:1 — at 220px tall the
-  // SVG was scaling to fit the narrower phone width and ending up at
-  // ~114px tall, half the visual presence it has on desktop. 300px gives
-  // the illustration room to read at the size it was designed for.
+  // On phone the SVG viewBox is 600×220 (~2.7:1). With preserveAspectRatio
+  // = "meet" the SVG fits to the narrower container width and ends up
+  // surrounded by empty space. We solve it with osto-bento-illus on the
+  // wrapper, which on phones scales the inner SVG up so it fills the
+  // 320px-tall container vertically and crops slightly on the sides
+  // (the artwork is centered in its viewBox, so the card and waveform
+  // stay readable). Desktop falls back to the original fit-to-box.
   return (
-    <div className="relative mt-auto h-[300px] w-full overflow-hidden sm:h-[260px] md:h-[260px]">
+    <div className="osto-bento-illus relative mt-auto h-[320px] w-full overflow-hidden sm:h-[260px]">
       {children}
     </div>
   );
@@ -1123,6 +1125,25 @@ function IllusConversation({ accent }: { accent: string }) {
 export function OstoModulesStyles() {
   return (
     <style>{`
+      /* Bento illustration sizing on phone — scale the inner SVG so it
+         fills the container vertically. The SVG viewBox is 600×220
+         (~2.7:1); without this the SVG fits-to-width and ends up half
+         the container's height. xMidYMid keeps the artwork centered
+         when the sides crop. Also zero the wrapper's px-4 padding so
+         the SVG can render edge-to-edge inside the bento cell. */
+      @media (max-width: 639px) {
+        .osto-bento-illus > div {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+        .osto-bento-illus svg {
+          width: auto !important;
+          height: 100% !important;
+          min-width: 100%;
+          max-width: none;
+        }
+      }
+
       /* Waveform bars: breathe their height. */
       @keyframes resonateModBar {
         0%, 100% { transform: scaleY(1); }
