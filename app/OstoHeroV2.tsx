@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { OstoModules, OstoModulesStyles } from "./OstoModules";
 
 // ─── Brand wordmark ───────────────────────────────────────────────────
@@ -556,7 +556,7 @@ function NavBar() {
           <div className="flex items-center gap-x-1">
             <Link
               href="#"
-              className="hidden  px-3 py-2 text-[13px] font-medium tracking-[-0.13px] md:inline-block"
+              className="hidden px-3 py-2 text-[13px] font-medium tracking-[-0.13px] md:inline-block"
               style={{ color: T.ink }}
             >
               Sign in
@@ -2973,7 +2973,7 @@ function PricingCalculator() {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setAudience(k)}
-                  className=" px-3.5 py-1.5 text-[13px] font-medium tracking-[-0.13px] transition-[background-color,color,box-shadow,scale] duration-200 ease-out active:scale-[0.96]"
+                  className="px-3.5 py-1.5 text-[13px] font-medium tracking-[-0.13px] transition-[background-color,color,box-shadow,scale] duration-200 ease-out active:scale-[0.96]"
                   style={{
                     background: isActive ? T.surface : "transparent",
                     color: isActive ? T.accent : T.inkSoft,
@@ -3082,7 +3082,7 @@ function PricingCalculator() {
                     return (
                       <li key={m.key}>
                         <label
-                          className="flex cursor-pointer items-center justify-between  p-2.5 transition-colors hover:bg-black/[0.03]"
+                          className="flex cursor-pointer items-center justify-between p-2.5 transition-colors hover:bg-black/[0.03]"
                           style={{
                             background: T.surface,
                             boxShadow: E.ringOnly,
@@ -3097,7 +3097,7 @@ function PricingCalculator() {
                             />
                             <span
                               aria-hidden
-                              className="flex h-4 w-4 items-center justify-center  transition-[background-color,box-shadow] duration-200 ease-out"
+                              className="flex h-4 w-4 items-center justify-center transition-[background-color,box-shadow] duration-200 ease-out"
                               style={{
                                 background: checked ? T.accent : T.surface,
                                 boxShadow: checked
@@ -3148,7 +3148,7 @@ function PricingCalculator() {
               </div>
 
               <label
-                className="flex cursor-pointer items-center justify-between  p-3"
+                className="flex cursor-pointer items-center justify-between p-3"
                 style={{
                   background: T.surface,
                   boxShadow: E.ringOnly,
@@ -3352,17 +3352,19 @@ function CalcSlider({
   onChange: (v: number) => void;
   format: (v: number) => string;
 }) {
+  const inputId = useId();
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <label
+          htmlFor={inputId}
           className="text-[13px] font-medium"
           style={{ color: T.ink, letterSpacing: "-0.13px" }}
         >
           {label}
         </label>
         <span
-          className=" px-2 py-0.5 text-[12px] font-medium tabular-nums"
+          className="px-2 py-0.5 text-[12px] font-medium tabular-nums"
           style={{
             background: T.surface,
             boxShadow: E.ringOnly,
@@ -3374,11 +3376,13 @@ function CalcSlider({
       </div>
       <div className="relative">
         <input
+          id={inputId}
           type="range"
           min={min}
           max={max}
           step={step}
           value={value}
+          aria-valuetext={format(value)}
           onChange={(e) => onChange(Number(e.target.value))}
           className="osto-range w-full"
           style={{
@@ -3682,7 +3686,7 @@ function TrustPillar({
 }) {
   return (
     <article
-      className=" p-7"
+      className="p-7"
       style={{ background: T.surface, boxShadow: E.card }}
     >
       <p
@@ -3977,7 +3981,7 @@ function Footer() {
                   <Link
                     href={s.href}
                     aria-label={s.label}
-                    className="inline-flex h-10 w-10 items-center justify-center  transition-colors hover:bg-black/[0.04]"
+                    className="inline-flex h-10 w-10 items-center justify-center transition-colors hover:bg-black/[0.04]"
                     style={{
                       background: T.surface,
                       boxShadow: E.ringOnly,
@@ -4101,7 +4105,7 @@ function FooterColumn({
 function CertChip({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="inline-flex items-center gap-x-1  px-2.5 py-0.5 text-[12px] font-medium leading-[20px]"
+      className="inline-flex items-center gap-x-1 px-2.5 py-0.5 text-[12px] font-medium leading-[20px]"
       style={{
         background: T.surface,
         boxShadow: E.ringOnly,

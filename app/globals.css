@@ -21,6 +21,17 @@ html {
   html {
     scroll-behavior: auto;
   }
+  /* Collapse every CSS transition so state changes are instant. We
+     intentionally do NOT zero `animation-duration` here — the bento
+     illustrations, hero waveform, and live indicators each gate their
+     own keyframe animations on prefers-reduced-motion, and a blanket
+     override would also kill intentional reduced-motion fallbacks. */
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
 }
 
 html,
