@@ -3895,7 +3895,13 @@ function FinalCTA() {
           background: BUTTON_BRAND_BG,
         }}
       >
-        <div className="text-center">
+        {/* Decorative AI-agent-graph patterns — left + right edges fade
+            inward so the headline stays the focal center. Hidden on
+            phone (the band is already tight). */}
+        <FinalCtaAgentPattern side="left" />
+        <FinalCtaAgentPattern side="right" />
+
+        <div className="relative z-10 text-center">
           <h1
             className="mx-auto max-w-[720px] text-balance text-center text-white text-[32px] leading-[36px] tracking-[-0.9px] sm:text-[40px] sm:leading-[44px] sm:tracking-[-1px] md:text-[56px] md:leading-[56px] md:tracking-[-1.4px]"
             style={{
@@ -3961,6 +3967,121 @@ function FinalCTA() {
         </div>
       </div>
     </section>
+  );
+}
+
+// ─── FinalCtaAgentPattern ─────────────────────────────────────────────
+// Decorative agent-graph: small white nodes connected by faint lines on
+// the brand-blue band, fading inward so the center text stays clean.
+// A few nodes pulse to suggest a live agent network. Hidden on phone.
+function FinalCtaAgentPattern({ side }: { side: "left" | "right" }) {
+  // Deterministic seeded RNG so node positions are stable between
+  // SSR + hydration and don't shift on rerender. Same mulberry32
+  // pattern used by the hero waveform.
+  const N = 18;
+  // Different seed per side so the two patterns aren't a mirror of
+  // each other.
+  let s = side === "left" ? 0x1f834a3b : 0x6c2d7e91;
+  const rand = () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let r = Math.imul(s ^ (s >>> 15), 1 | s);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+  // Place nodes in a 4-column × N/4-row grid inside a 120×420 viewBox,
+  // with per-node jitter so they read as scattered, not a strict lattice.
+  const W = 120;
+  const H = 420;
+  const cols = 4;
+  const rows = Math.ceil(N / cols);
+  const nodes = Array.from({ length: N }, (_, i) => {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    const cx = ((c + 0.5) / cols) * W + (rand() - 0.5) * 14;
+    const cy = ((r + 0.5) / rows) * H + (rand() - 0.5) * 18;
+    // Active nodes pulse; the rest sit at low opacity.
+    const isActive = rand() > 0.72;
+    const radius = isActive ? 2.4 : 1.6;
+    return { cx, cy, isActive, radius, delay: Math.floor(rand() * 2400) };
+  });
+  // Connect each node to its nearest 1–2 neighbors so the graph reads
+  // as a network rather than scattered dots.
+  type Edge = { a: number; b: number };
+  const edges: Edge[] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    // Find the two closest nodes by squared distance.
+    const dists = nodes
+      .map((n, j) => ({
+        j,
+        d:
+          (n.cx - nodes[i].cx) ** 2 +
+          (n.cy - nodes[i].cy) ** 2,
+      }))
+      .filter((x) => x.j !== i)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 2);
+    for (const { j } of dists) {
+      // Dedupe by ordered pair so we don't draw both A→B and B→A.
+      const lo = Math.min(i, j);
+      const hi = Math.max(i, j);
+      if (!edges.some((e) => e.a === lo && e.b === hi)) {
+        edges.push({ a: lo, b: hi });
+      }
+    }
+  }
+
+  // Inward fade — the side closest to center fades to transparent.
+  const fade =
+    side === "left"
+      ? "linear-gradient(to right, #000 0%, #000 55%, transparent 100%)"
+      : "linear-gradient(to left,  #000 0%, #000 55%, transparent 100%)";
+
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 z-0 hidden w-[120px] md:block lg:w-[140px]"
+      style={{
+        [side]: 0,
+        WebkitMaskImage: fade,
+        maskImage: fade,
+      }}
+    >
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ display: "block" }}
+      >
+        {/* Edges */}
+        {edges.map((e, i) => (
+          <line
+            key={`e-${i}`}
+            x1={nodes[e.a].cx}
+            y1={nodes[e.a].cy}
+            x2={nodes[e.b].cx}
+            y2={nodes[e.b].cy}
+            stroke="#ffffff"
+            strokeWidth="0.6"
+            opacity="0.22"
+          />
+        ))}
+        {/* Nodes */}
+        {nodes.map((n, i) => (
+          <circle
+            key={`n-${i}`}
+            className={n.isActive ? "osto-cta-node osto-cta-node-pulse" : "osto-cta-node"}
+            cx={n.cx}
+            cy={n.cy}
+            r={n.radius}
+            fill="#ffffff"
+            opacity={n.isActive ? 0.95 : 0.55}
+            style={{ animationDelay: `${n.delay}ms` }}
+          />
+        ))}
+      </svg>
+    </div>
   );
 }
 
@@ -4518,6 +4639,22 @@ function V2Styles() {
       @media (prefers-reduced-motion: reduce) {
         .resonate-bar,
         .resonate-live-dot {
+          animation: none !important;
+        }
+      }
+
+      /* ─── FinalCTA agent-graph nodes ─────────────────────────────────
+         Active nodes pulse opacity to suggest a live agent network;
+         the inactive nodes sit at low opacity as static structure. */
+      @keyframes ostoCtaNodePulse {
+        0%, 100% { opacity: 0.95; }
+        50%      { opacity: 0.35; }
+      }
+      .osto-cta-node-pulse {
+        animation: ostoCtaNodePulse 2200ms ease-in-out infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .osto-cta-node-pulse {
           animation: none !important;
         }
       }
