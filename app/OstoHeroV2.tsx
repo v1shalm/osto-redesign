@@ -3352,37 +3352,39 @@ function CalcSlider({
   onChange: (v: number) => void;
   format: (v: number) => string;
 }) {
-  // Single-row layout: label left, large value right, a thin tick rail
-  // running the full row width with a blue thumb bar that moves to
-  // reflect the value. The native <input type=range> overlays the row
-  // for accessibility — invisible visually but keyboard/touch usable.
-  // --osto-frac is a unitless 0..1 fraction so the thumb-position math
-  // in CSS works in every browser (avoids cross-unit divisions).
-  const frac = (value - min) / (max - min);
   return (
-    <div
-      className="osto-slider"
-      style={{
-        ["--osto-frac" as string]: `${frac}`,
-      }}
-    >
-      <div className="osto-slider-row">
-        <label className="osto-slider-label">{label}</label>
-        <span className="osto-slider-value tabular-nums">{format(value)}</span>
-        {/* Tick rail — dotted ticks across the full row, behind the label/value */}
-        <span aria-hidden className="osto-slider-ticks" />
-        {/* Thumb — vertical bar that snaps to the current value */}
-        <span aria-hidden className="osto-slider-thumb" />
-        {/* Native range overlays the row for keyboard + touch */}
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <label
+          className="text-[13px] font-medium"
+          style={{ color: T.ink, letterSpacing: "-0.13px" }}
+        >
+          {label}
+        </label>
+        <span
+          className=" px-2 py-0.5 text-[12px] font-medium tabular-nums"
+          style={{
+            background: T.surface,
+            boxShadow: E.ringOnly,
+            color: T.ink,
+          }}
+        >
+          {format(value)}
+        </span>
+      </div>
+      <div className="relative">
         <input
           type="range"
-          aria-label={label}
           min={min}
           max={max}
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="osto-slider-input"
+          className="osto-range w-full"
+          style={{
+            // CSS var for the filled portion
+            ["--osto-pct" as string]: `${((value - min) / (max - min)) * 100}%`,
+          }}
         />
       </div>
     </div>
@@ -4545,139 +4547,103 @@ function V2Styles() {
       }
 
       /* ─── Pricing calculator slider ────────────────────────────────
-         A single-row interactive rail. The label sits on the left, the
-         value on the right, and a thin tick rail with a vertical blue
-         thumb bar runs the full row width. The native <input type=range>
-         lies on top of the row, transparent, so it stays accessible to
-         keyboards and touch while the visual chrome is pure CSS. */
-      .osto-slider {
-        --osto-track-h: 6px;
-        --osto-thumb-h: 22px;
+         Horizontal 6px track with a rectangular draggable thumb styled
+         like the white ghost CTA: surface fill, hairline ring, inner
+         highlight, and a soft drop shadow. Three vertical grooves at
+         the center give it a tactile "knurled grip" detail. The track
+         fills with brand accent up to the thumb. */
+      .osto-range {
+        appearance: none;
+        -webkit-appearance: none;
+        background: transparent;
+        height: 28px;
+        cursor: pointer;
       }
-      .osto-slider-row {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        height: 56px;
-        padding: 0 18px;
-        background: ${T.surface};
-        box-shadow: ${E.ringOnly};
-        overflow: hidden;
-        isolation: isolate;
+      .osto-range:focus { outline: none; }
+      .osto-range::-webkit-slider-runnable-track {
+        height: 6px;
+        background: linear-gradient(
+          to right,
+          ${T.accent} 0,
+          ${T.accent} var(--osto-pct, 0%),
+          ${T.inkLine} var(--osto-pct, 0%),
+          ${T.inkLine} 100%
+        );
       }
-      .osto-slider-label {
-        position: relative;
-        z-index: 2;
-        font-size: 13px;
-        font-weight: 500;
-        letter-spacing: -0.13px;
-        color: ${T.ink};
-        pointer-events: none;
+      .osto-range::-moz-range-track {
+        height: 6px;
+        background: ${T.inkLine};
       }
-      .osto-slider-value {
-        position: relative;
-        z-index: 2;
-        font-family: ${T.fontDisplay};
-        font-size: 20px;
-        font-weight: 500;
-        line-height: 24px;
-        letter-spacing: -0.4px;
-        color: ${T.ink};
-        pointer-events: none;
-      }
-      /* Tick rail — evenly spaced 1×1 dots across the row, masked so
-         they fade at the row's outer edges. Sits behind the label and
-         value so the visual reads as "ticks on a ruler" instead of a
-         busy stripe. */
-      .osto-slider-ticks {
-        position: absolute;
-        left: 18px;
-        right: 18px;
-        top: 50%;
-        height: var(--osto-track-h);
-        transform: translateY(-50%);
-        background-image: radial-gradient(circle, ${T.inkLine} 1px, transparent 1.2px);
-        background-size: 14px 100%;
-        background-repeat: repeat-x;
-        background-position: 0 50%;
-        z-index: 0;
-        pointer-events: none;
-      }
-      /* Thumb — vertical brand-blue bar that snaps to the current
-         value. Positioned absolute against the row, x = pct of the
-         scrollable rail width. The 18px padding on the row matches the
-         inset used for ticks so the thumb lines up with the rail ends. */
-      .osto-slider-thumb {
-        position: absolute;
-        top: 50%;
-        left: calc(18px + (100% - 36px) * var(--osto-frac, 0));
-        width: 3px;
-        height: var(--osto-thumb-h);
+      .osto-range::-moz-range-progress {
+        height: 6px;
         background: ${T.accent};
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 0 0 ${T.accent}00, 0 0 14px ${T.accent}55;
-        z-index: 1;
-        pointer-events: none;
-        transition: box-shadow 160ms ease-out;
       }
-      /* Filled portion of the tick rail — same ticks but in brand blue
-         up to the thumb. Layered ABOVE the muted ticks via z-index. */
-      .osto-slider-row::before {
-        content: "";
-        position: absolute;
-        left: 18px;
-        top: 50%;
-        height: var(--osto-track-h);
-        width: calc((100% - 36px) * var(--osto-frac, 0));
-        transform: translateY(-50%);
-        background-image: radial-gradient(circle, ${T.accent} 1px, transparent 1.2px);
-        background-size: 14px 100%;
-        background-repeat: repeat-x;
-        background-position: 0 50%;
-        z-index: 0;
-        pointer-events: none;
-      }
-      /* Invisible native range fills the whole row for hit-testing. */
-      .osto-slider-input {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        opacity: 0;
-        cursor: ew-resize;
-        z-index: 3;
-        -webkit-appearance: none;
+      /* Rectangular thumb — ghost-CTA detailing: white surface, hairline
+         ring, inset top highlight, drop shadow. Vertical grooves are
+         drawn via a repeating linear-gradient centered in the thumb. */
+      .osto-range::-webkit-slider-thumb {
         appearance: none;
-        background: transparent;
-      }
-      .osto-slider-input::-webkit-slider-thumb {
         -webkit-appearance: none;
-        appearance: none;
-        width: 44px;
-        height: 56px;
-        background: transparent;
+        width: 18px;
+        height: 26px;
+        background:
+          /* Three 1px grooves, 3px apart, centered in the thumb. The
+             gap (transparent) is set with explicit stops so the grooves
+             stay crisp regardless of subpixel rendering. */
+          linear-gradient(
+            to right,
+            transparent calc(50% - 5px),
+            rgba(10,10,16,0.22) calc(50% - 5px),
+            rgba(10,10,16,0.22) calc(50% - 4px),
+            transparent calc(50% - 4px),
+            transparent calc(50% - 1px),
+            rgba(10,10,16,0.22) calc(50% - 1px),
+            rgba(10,10,16,0.22) calc(50%),
+            transparent calc(50%),
+            transparent calc(50% + 3px),
+            rgba(10,10,16,0.22) calc(50% + 3px),
+            rgba(10,10,16,0.22) calc(50% + 4px),
+            transparent calc(50% + 4px)
+          ),
+          ${T.surface};
+        box-shadow: ${E.buttonGhost}, 0 1px 2px rgba(10,10,16,0.10), 0 4px 10px -4px rgba(10,10,16,0.12);
+        margin-top: -10px;
         cursor: grab;
+        transition: transform 120ms ease-out, box-shadow 120ms ease-out;
       }
-      .osto-slider-input::-moz-range-thumb {
-        width: 44px;
-        height: 56px;
-        background: transparent;
+      .osto-range::-moz-range-thumb {
+        width: 18px;
+        height: 26px;
         border: 0;
+        background:
+          linear-gradient(
+            to right,
+            transparent calc(50% - 5px),
+            rgba(10,10,16,0.22) calc(50% - 5px),
+            rgba(10,10,16,0.22) calc(50% - 4px),
+            transparent calc(50% - 4px),
+            transparent calc(50% - 1px),
+            rgba(10,10,16,0.22) calc(50% - 1px),
+            rgba(10,10,16,0.22) calc(50%),
+            transparent calc(50%),
+            transparent calc(50% + 3px),
+            rgba(10,10,16,0.22) calc(50% + 3px),
+            rgba(10,10,16,0.22) calc(50% + 4px),
+            transparent calc(50% + 4px)
+          ),
+          ${T.surface};
+        box-shadow: ${E.buttonGhost}, 0 1px 2px rgba(10,10,16,0.10), 0 4px 10px -4px rgba(10,10,16,0.12);
         cursor: grab;
       }
-      .osto-slider-input:active { cursor: grabbing; }
-      .osto-slider-input:active::-webkit-slider-thumb { cursor: grabbing; }
-      .osto-slider-input:focus-visible {
-        outline: 2px solid ${T.accent};
-        outline-offset: 2px;
+      .osto-range:hover::-webkit-slider-thumb,
+      .osto-range:focus-visible::-webkit-slider-thumb {
+        transform: translateY(-1px);
+        box-shadow: ${E.buttonGhost}, 0 2px 4px rgba(10,10,16,0.12), 0 8px 18px -6px rgba(10,10,16,0.18);
       }
-      .osto-slider-row:hover .osto-slider-thumb,
-      .osto-slider-row:focus-within .osto-slider-thumb {
-        box-shadow: 0 0 0 0 ${T.accent}00, 0 0 22px ${T.accent}88;
+      .osto-range:active::-webkit-slider-thumb {
+        cursor: grabbing;
+        transform: translateY(0);
+        box-shadow: ${E.buttonGhost}, 0 0 0 4px ${T.accent}22, 0 1px 2px rgba(10,10,16,0.10);
       }
 
       /* Checkbox check-mark draw on toggle. The path draws from start to
