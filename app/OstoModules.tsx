@@ -231,13 +231,14 @@ function BentoCopy({
 }
 
 function BentoIllusContainer({ children }: { children: React.ReactNode }) {
-  // 260px tall on every breakpoint. On phones the inner SVG (600×220
-  // viewBox) is then scaled up ~1.7× via the .osto-bento-illus CSS
-  // hook so the artwork visually fills the cell instead of collapsing
-  // to a thin fit-to-width strip; overflow-hidden here crops the
-  // horizontal overflow.
+  // On phone the container matches the SVG's natural aspect (600/220)
+  // so the artwork renders edge-to-edge with no empty bands above or
+  // below. Roughly 380×140 on a phone — the artwork itself stays
+  // legible because it spans the full available width.
+  // On md+ we lock to a flat 260px box because the desktop layout
+  // pairs the SVG against text and we want fixed beat heights.
   return (
-    <div className="osto-bento-illus relative mt-auto h-[260px] w-full overflow-hidden">
+    <div className="osto-bento-illus relative mt-auto w-full overflow-hidden aspect-[600/220] sm:aspect-auto sm:h-[260px]">
       {children}
     </div>
   );
@@ -1123,22 +1124,15 @@ function IllusConversation({ accent }: { accent: string }) {
 export function OstoModulesStyles() {
   return (
     <style>{`
-      /* Bento illustration sizing on phone — the SVG viewBox is 600×220
-         (~2.7:1) so preserveAspectRatio="meet" inside a phone-width
-         container collapses the SVG to ~140px tall, leaving the rest
-         of the 320px container empty. Solution: zero the wrapper's
-         padding and scale the SVG up (~1.6×) via transform so it
-         visually fills more of the cell. overflow-hidden on the bento
-         cell crops the horizontal overflow; the viewBox is centered so
-         cropping is symmetric and the card / waveform stay readable. */
+      /* Bento illustration sizing on phone — zero the wrapper's padding
+         so the SVG can render edge-to-edge inside the bento cell. No
+         scaling: the SVG (600×220 viewBox, "meet" fit) renders at its
+         natural fit-to-width size; we instead match the container's
+         aspect to the artwork so there's no empty band above/below. */
       @media (max-width: 639px) {
         .osto-bento-illus > div {
           padding-left: 0 !important;
           padding-right: 0 !important;
-        }
-        .osto-bento-illus svg {
-          transform: scale(1.7);
-          transform-origin: center;
         }
       }
 
