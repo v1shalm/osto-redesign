@@ -4556,8 +4556,30 @@ function V2Styles() {
         appearance: none;
         -webkit-appearance: none;
         background: transparent;
-        height: 28px;
+        /* 44px outer height = 44px tap target on touch devices, even
+           though the visible track is only 6px and the thumb 18px. */
+        height: 44px;
         cursor: pointer;
+        /* Match the app-wide motion curve used by the buttons so the
+           thumb feels like the same family of object. */
+        --osto-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+        /* Static thumb shadow stack — kept in a var so hover/active can
+           swap the whole stack without recomposing the rule. Avoids
+           transitioning box-shadow on drag (jank). */
+        --osto-thumb-shadow:
+          ${E.buttonGhost},
+          0 1px 2px rgba(10,10,16,0.12),
+          0 2px 6px -1px rgba(10,10,16,0.14),
+          0 8px 16px -6px rgba(10,10,16,0.18);
+        --osto-thumb-shadow-hover:
+          ${E.buttonGhost},
+          0 2px 4px rgba(10,10,16,0.14),
+          0 6px 12px -2px rgba(10,10,16,0.18),
+          0 12px 24px -8px rgba(10,10,16,0.22);
+        --osto-thumb-shadow-active:
+          ${E.buttonGhost},
+          0 0 0 4px ${T.accent}22,
+          0 1px 2px rgba(10,10,16,0.12);
       }
       .osto-range:focus { outline: none; }
       .osto-range::-webkit-slider-runnable-track {
@@ -4580,95 +4602,104 @@ function V2Styles() {
       }
       /* Rectangular thumb — ghost-CTA detailing: white surface, hairline
          ring, inset top highlight, soft drop shadow for depth. Three
-         faint 8px-tall vertical grooves sit centered in the thumb so
-         they read as a grip detail rather than running edge to edge. */
+         center grooves give it a tactile "knurled grip" detail. The
+         thumb is 18×22; the visual band is centered on the 6px track. */
       .osto-range::-webkit-slider-thumb {
         appearance: none;
         -webkit-appearance: none;
         width: 18px;
-        height: 18px;
+        height: 22px;
         background:
-          /* Three faint 1px-wide grooves, 4px apart, only 8px tall and
-             centered vertically (top: 5px, height: 8px). Drawn via a
-             radial-clipped linear-gradient: linear handles the columns,
-             background-size + background-position localizes the strip. */
+          /* Three 1px-wide grooves, 4px apart, drawn in a centered 10×9
+             band via background-size + background-position. Opacity 0.18
+             reads as a quiet grip detail without becoming a stripe. */
           linear-gradient(
             to right,
             transparent calc(50% - 5px),
-            rgba(10,10,16,0.10) calc(50% - 5px),
-            rgba(10,10,16,0.10) calc(50% - 4px),
+            rgba(10,10,16,0.18) calc(50% - 5px),
+            rgba(10,10,16,0.18) calc(50% - 4px),
             transparent calc(50% - 4px),
             transparent calc(50% - 1px),
-            rgba(10,10,16,0.10) calc(50% - 1px),
-            rgba(10,10,16,0.10) calc(50%),
+            rgba(10,10,16,0.18) calc(50% - 1px),
+            rgba(10,10,16,0.18) calc(50%),
             transparent calc(50%),
             transparent calc(50% + 3px),
-            rgba(10,10,16,0.10) calc(50% + 3px),
-            rgba(10,10,16,0.10) calc(50% + 4px),
+            rgba(10,10,16,0.18) calc(50% + 3px),
+            rgba(10,10,16,0.18) calc(50% + 4px),
             transparent calc(50% + 4px)
           ),
           ${T.surface};
         background-repeat: no-repeat;
-        /* Strip the grooves to a center band: 10px wide, 8px tall,
-           centered. The surface fill takes the remaining area. */
-        background-size: 10px 8px, 100% 100%;
+        background-size: 10px 9px, 100% 100%;
         background-position: center, 0 0;
-        box-shadow:
-          ${E.buttonGhost},
-          0 1px 2px rgba(10,10,16,0.12),
-          0 2px 6px -1px rgba(10,10,16,0.14),
-          0 8px 16px -6px rgba(10,10,16,0.18);
-        margin-top: -6px;
+        box-shadow: var(--osto-thumb-shadow);
+        /* Center the thumb on the 6px track inside a 44px-tall input:
+           track top = (44 - 6) / 2 = 19; thumb top = 19 - (22 - 6)/2 = 11.
+           margin-top on a webkit thumb is relative to the track, so the
+           offset is -(thumb_h - track_h)/2 = -8. */
+        margin-top: -8px;
         cursor: grab;
-        transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+        /* Only transform animates — box-shadow swaps via CSS var
+           reassignment so drag stays 60fps. */
+        transition: transform 160ms var(--osto-ease);
       }
       .osto-range::-moz-range-thumb {
         width: 18px;
-        height: 18px;
+        height: 22px;
         border: 0;
         background:
           linear-gradient(
             to right,
             transparent calc(50% - 5px),
-            rgba(10,10,16,0.10) calc(50% - 5px),
-            rgba(10,10,16,0.10) calc(50% - 4px),
+            rgba(10,10,16,0.18) calc(50% - 5px),
+            rgba(10,10,16,0.18) calc(50% - 4px),
             transparent calc(50% - 4px),
             transparent calc(50% - 1px),
-            rgba(10,10,16,0.10) calc(50% - 1px),
-            rgba(10,10,16,0.10) calc(50%),
+            rgba(10,10,16,0.18) calc(50% - 1px),
+            rgba(10,10,16,0.18) calc(50%),
             transparent calc(50%),
             transparent calc(50% + 3px),
-            rgba(10,10,16,0.10) calc(50% + 3px),
-            rgba(10,10,16,0.10) calc(50% + 4px),
+            rgba(10,10,16,0.18) calc(50% + 3px),
+            rgba(10,10,16,0.18) calc(50% + 4px),
             transparent calc(50% + 4px)
           ),
           ${T.surface};
         background-repeat: no-repeat;
-        background-size: 10px 8px, 100% 100%;
+        background-size: 10px 9px, 100% 100%;
         background-position: center, 0 0;
-        box-shadow:
-          ${E.buttonGhost},
-          0 1px 2px rgba(10,10,16,0.12),
-          0 2px 6px -1px rgba(10,10,16,0.14),
-          0 8px 16px -6px rgba(10,10,16,0.18);
+        box-shadow: var(--osto-thumb-shadow);
         cursor: grab;
+        transition: transform 160ms var(--osto-ease);
       }
       .osto-range:hover::-webkit-slider-thumb,
       .osto-range:focus-visible::-webkit-slider-thumb {
         transform: translateY(-1px);
-        box-shadow:
-          ${E.buttonGhost},
-          0 2px 4px rgba(10,10,16,0.14),
-          0 6px 12px -2px rgba(10,10,16,0.18),
-          0 12px 24px -8px rgba(10,10,16,0.22);
+        box-shadow: var(--osto-thumb-shadow-hover);
+      }
+      .osto-range:hover::-moz-range-thumb,
+      .osto-range:focus-visible::-moz-range-thumb {
+        transform: translateY(-1px);
+        box-shadow: var(--osto-thumb-shadow-hover);
       }
       .osto-range:active::-webkit-slider-thumb {
         cursor: grabbing;
         transform: translateY(0);
-        box-shadow:
-          ${E.buttonGhost},
-          0 0 0 4px ${T.accent}22,
-          0 1px 2px rgba(10,10,16,0.12);
+        box-shadow: var(--osto-thumb-shadow-active);
+      }
+      .osto-range:active::-moz-range-thumb {
+        cursor: grabbing;
+        transform: translateY(0);
+        box-shadow: var(--osto-thumb-shadow-active);
+      }
+      .osto-range:focus-visible {
+        outline: 2px solid ${T.accent};
+        outline-offset: 4px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .osto-range::-webkit-slider-thumb,
+        .osto-range::-moz-range-thumb {
+          transition: none;
+        }
       }
 
       /* Checkbox check-mark draw on toggle. The path draws from start to
