@@ -1970,15 +1970,12 @@ function HowItWorksPanel({
 }) {
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="osto-rail-frame relative w-full overflow-hidden"
       style={{
         background: T.panel,
-        marginLeft: `calc(${RAIL_INSET} + 1px)`,
-        marginRight: `calc(${RAIL_INSET} + 1px)`,
         boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
-        // The margins already inset the panel from both rails. Don't
-        // additionally reduce the width — that would double-inset and
-        // make the panel float in the middle.
+        // Margins are applied via .osto-hiw-frame so they can be zero
+        // on phone (rails are hidden < md) and the rail-inset on md+.
       }}
     >
       <div className="relative grid gap-y-10 px-6 py-10 md:grid-cols-[1fr_1.05fr] md:items-center md:gap-x-12 md:px-12 md:py-16">
@@ -2318,13 +2315,7 @@ function ProblemSection() {
 
       {/* Two panels split the rail-bounded area edge to edge.
           Stack vertically below md so the hero metrics don't crush. */}
-      <div
-        className="mt-12 grid grid-cols-1 md:[grid-template-columns:minmax(0,12fr)_minmax(0,14fr)]"
-        style={{
-          marginLeft: `calc(${RAIL_INSET} + 1px)`,
-          marginRight: `calc(${RAIL_INSET} + 1px)`,
-        }}
-      >
+      <div className="osto-rail-frame mt-12 grid grid-cols-1 md:[grid-template-columns:minmax(0,12fr)_minmax(0,14fr)]">
         <ComparisonPanel
           tone="neutral"
           label="DIY voice stack"
@@ -3005,11 +2996,9 @@ function PricingCalculator() {
           as a hairline boundary on each side. Top + bottom inset
           hairlines ground the three columns inside. */}
       <div
-        className="mt-16 overflow-hidden"
+        className="osto-rail-frame mt-16 overflow-hidden"
         style={{
           background: T.surface,
-          marginLeft: `calc(${RAIL_INSET} + 1px)`,
-          marginRight: `calc(${RAIL_INSET} + 1px)`,
           boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
         }}
       >
@@ -3850,11 +3839,9 @@ function FinalCTA() {
     // there — doing so would clip the bottom of the CTA into the footer.
     <section className="relative">
       <div
-        className="relative overflow-hidden px-6 py-12 sm:px-8 sm:py-14 md:px-14 md:py-20 md:[margin-top:-56px] md:[margin-bottom:-56px]"
+        className="osto-rail-frame-inner relative overflow-hidden px-6 py-12 sm:px-8 sm:py-14 md:px-14 md:py-20 md:[margin-top:-56px] md:[margin-bottom:-56px]"
         style={{
           background: BUTTON_BRAND_BG,
-          marginLeft: RAIL_INSET,
-          marginRight: RAIL_INSET,
         }}
       >
         <div className="text-center">
@@ -3934,11 +3921,9 @@ function Footer() {
     // copyright row gets generous breathing room.
     <footer className="relative">
       <div
-        className="px-6 pb-20 pt-10 sm:px-8 sm:pb-24 sm:pt-12 md:px-12 md:pb-32 md:pt-14 md:[margin-top:-56px]"
+        className="osto-rail-frame-inner px-6 pb-20 pt-10 sm:px-8 sm:pb-24 sm:pt-12 md:px-12 md:pb-32 md:pt-14 md:[margin-top:-56px]"
         style={{
           background: T.panel,
-          marginLeft: RAIL_INSET,
-          marginRight: RAIL_INSET,
         }}
       >
        <div className="mx-auto max-w-[1120px]">
@@ -4411,6 +4396,29 @@ function V2Styles() {
         outline-offset: 2px;
       }
       :focus:not(:focus-visible) { outline: none; }
+
+      /* Rail-bound panels (HowItWorks, ProblemSection panels, Pricing
+         Calculator, FinalCTA, Footer) — full-bleed on phone, rail-inset
+         on md+. On phone the rails are hidden so an inset wastes space
+         and makes the panel look cropped. */
+      .osto-rail-frame {
+        margin-left: 0;
+        margin-right: 0;
+      }
+      .osto-rail-frame-inner {
+        margin-left: 0;
+        margin-right: 0;
+      }
+      @media (min-width: 768px) {
+        .osto-rail-frame {
+          margin-left: calc(max(24px, calc((100vw - 1240px) / 2)) + 1px);
+          margin-right: calc(max(24px, calc((100vw - 1240px) / 2)) + 1px);
+        }
+        .osto-rail-frame-inner {
+          margin-left: max(24px, calc((100vw - 1240px) / 2));
+          margin-right: max(24px, calc((100vw - 1240px) / 2));
+        }
+      }
 
       /* Hero waveform — each bar gently breathes its height. Per-bar
          delay (set inline) creates a travelling wave effect. */

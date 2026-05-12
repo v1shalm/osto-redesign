@@ -104,16 +104,13 @@ export function OstoModules() {
       </div>
 
       {/* Bento — full-bleed: extends edge-to-edge to V2's global page rails.
-          + 1px margin inside the rail line keeps the rail visible as a
-          hairline boundary on each side. Top + bottom inset hairlines
-          ground the grid against the rails. No outer radius; no shadow
-          (the section is itself the surface, not a card on the page). */}
+          On phone the page rails are hidden, so the bento goes fully
+          edge-to-edge (mx-0). On md+ we inset by RAIL_INSET + 1px so
+          the rails read as the bento's outer frame. */}
       <div
-        className="relative mt-12 overflow-hidden md:mt-16"
+        className="osto-rail-frame relative mt-12 overflow-hidden md:mt-16"
         style={{
           background: T.surface,
-          marginLeft: `calc(${RAIL_INSET} + 1px)`,
-          marginRight: `calc(${RAIL_INSET} + 1px)`,
           boxShadow: `inset 0 1px 0 0 ${RAIL_STROKE}, inset 0 -1px 0 0 ${RAIL_STROKE}`,
         }}
       >
@@ -194,9 +191,8 @@ function BentoCell({
 
   return (
     <article
-      className="relative flex flex-col overflow-hidden"
+      className="relative flex min-h-[500px] flex-col overflow-hidden sm:min-h-[440px]"
       style={{
-        minHeight: 440,
         boxShadow: shadows.join(", "),
       }}
     >
@@ -235,8 +231,13 @@ function BentoCopy({
 }
 
 function BentoIllusContainer({ children }: { children: React.ReactNode }) {
+  // Mobile illustration zone is taller than the desktop one because the
+  // SVGs use viewBox aspect ratios closer to 2.7:1 — at 220px tall the
+  // SVG was scaling to fit the narrower phone width and ending up at
+  // ~114px tall, half the visual presence it has on desktop. 300px gives
+  // the illustration room to read at the size it was designed for.
   return (
-    <div className="relative mt-auto h-[220px] w-full overflow-hidden md:h-[260px]">
+    <div className="relative mt-auto h-[300px] w-full overflow-hidden sm:h-[260px] md:h-[260px]">
       {children}
     </div>
   );
