@@ -79,7 +79,7 @@ const RAIL_STROKE = PALETTE.ring;
 // ─── Section ──────────────────────────────────────────────────────────
 export function OstoModules() {
   return (
-    <section style={{ color: T.ink }}>
+    <section className="pt-4" style={{ color: T.ink }}>
       {/* Heading — left-aligned for consistency with the rest of the
           section headings on the page. */}
       <div className="mx-auto max-w-[1240px] px-5 sm:px-6">

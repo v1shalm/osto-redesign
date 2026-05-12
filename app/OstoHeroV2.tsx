@@ -381,11 +381,13 @@ function SectionSpacer({
     <>
       {/* Mobile: a single, consistent vertical gap between every
           section. No rail chrome on phone — page rails are hidden
-          anyway, and the rails-only spacer collapsed entirely before. */}
+          anyway, and the rails-only spacer collapsed entirely before.
+          96px gives clear separation between adjacent sections without
+          feeling like an empty room. */}
       <div
         aria-hidden
         className="pointer-events-none md:hidden"
-        style={{ height: 80 }}
+        style={{ height: 96 }}
       />
       {/* Desktop / tablet: the full rail-bound spacer with dashed
           ticks running between the two page rails. */}
@@ -730,24 +732,26 @@ function MobileNavSheet({
       style={{
         background: T.surface,
         boxShadow: E.card,
-        // Capped so the dropdown never extends past the viewport.
-        // 78vh leaves visible page underneath, signaling "this is a
-        // dropdown, not a takeover."
-        maxHeight: "78dvh",
+        // Cap below 100dvh so the dropdown never extends past the
+        // viewport, AND leave a strip of page visible underneath so
+        // it reads as a dropdown, not a takeover. 72dvh + the nav
+        // capsule above it (~64px) leaves ~24% of viewport unobscured
+        // on phones where 100dvh ≈ 800px.
+        maxHeight: "72dvh",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
       }}
     >
-      <div style={{ paddingBlock: 12, paddingInline: 12 }}>
+      <div style={{ paddingBlock: 10, paddingInline: 10 }}>
         {MOBILE_NAV_SECTIONS.map((section) => (
-          <div key={section.heading} className="mb-3">
+          <div key={section.heading} className="mb-2">
             <p
               className="px-2 text-[10.5px] font-medium uppercase"
               style={{
                 color: T.inkSubtle,
                 fontFamily: T.fontMono,
                 letterSpacing: "0.06em",
-                paddingBlock: 6,
+                paddingBlock: 4,
               }}
             >
               {section.heading}
@@ -758,7 +762,7 @@ function MobileNavSheet({
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className="block px-2 py-2.5 text-[14px] font-medium active:bg-black/[0.04]"
+                    className="block px-2 py-2 text-[14px] font-medium active:bg-black/[0.04]"
                     style={{ color: T.ink, letterSpacing: "-0.012em" }}
                   >
                     {item.label}
@@ -775,7 +779,7 @@ function MobileNavSheet({
           style={{
             borderTop: `1px solid ${T.ring}`,
             paddingTop: 4,
-            marginTop: 4,
+            marginTop: 2,
           }}
         >
           {[
@@ -787,7 +791,7 @@ function MobileNavSheet({
               key={row.label}
               href={row.href}
               onClick={onClose}
-              className="flex items-center justify-between px-2 py-2.5 active:bg-black/[0.04]"
+              className="flex items-center justify-between px-2 py-2 active:bg-black/[0.04]"
               style={{ color: T.ink }}
             >
               <span
@@ -1570,33 +1574,26 @@ function HeroWaveform() {
   // ending in a hard edge with gray pips.
   const BAR_W = 4;
   const GAP_PX = 3;
-  // Horizontal mask: transparent at 0%, opaque from 12% to 88%, back to
-  // transparent at 100%. Applied to the container so the entire visual
-  // (bars + their glow) fades together. We set both vendor properties
-  // so Safari + Firefox + Chrome all honor it.
-  const fadeMask =
-    "linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%)";
+  // Edge fade is applied via the wrapper class `resonate-wave-mask`,
+  // not inline. The mask is suppressed below the `sm` breakpoint so
+  // iOS Safari (which intermittently renders mask-image as fully
+  // transparent on small viewports) can't make the entire strip vanish
+  // on a phone. Desktop still gets the soft falloff.
   return (
     <div
       aria-hidden
       className="relative mx-auto"
       style={{
         // Stage = cluster width on desktop (~896px). Shrinks on phone
-        // so the wave stays inside the viewport.
+        // so the wave stays inside the viewport. Mobile lifted to a
+        // 180px floor so the strip is unmissable on phones.
         width: "clamp(320px, 96vw, 960px)",
-        // Tall, instrumentation-panel feel.
-        height: "clamp(140px, 22vw, 200px)",
+        height: "clamp(180px, 28vw, 220px)",
       }}
     >
       <div
-        className="flex h-full w-full items-center justify-center"
-        style={{
-          gap: GAP_PX,
-          // Radial-style left/right fade. WebkitMaskImage covers Safari;
-          // maskImage covers everything else.
-          WebkitMaskImage: fadeMask,
-          maskImage: fadeMask,
-        }}
+        className="resonate-wave-mask flex h-full w-full items-center justify-center"
+        style={{ gap: GAP_PX }}
       >
         {bars.map((h, i) => {
           const t = i / (N - 1);
@@ -2310,7 +2307,7 @@ function ProblemSection() {
           <span style={{ color: T.accent }}>months.</span>
         </SectionHeading>
         <p
-          className="mx-auto mt-4 max-w-[600px] text-pretty text-center text-[15px] leading-[24px]"
+          className="mt-4 max-w-[600px] text-pretty text-[15px] leading-[24px]"
           style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
         >
           You wire up a TTS vendor, an STT vendor, an LLM, and a telephony
@@ -4424,6 +4421,16 @@ function V2Styles() {
       .resonate-bar {
         transform-origin: center;
         animation: resonateBarBreathe 1800ms ease-in-out infinite;
+      }
+      /* Soft horizontal fade at the wave edges — desktop only. On phones
+         iOS Safari occasionally renders mask-image fully transparent at
+         small widths, so we drop the mask below 640px and let the bars
+         sit edge-to-edge inside the overflow-clipped <main>. */
+      @media (min-width: 640px) {
+        .resonate-wave-mask {
+          -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
+                  mask-image: linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
+        }
       }
 
       /* Live indicator dot — slow saturation pulse with glow. */
