@@ -1020,176 +1020,139 @@ function MegaMenu({
   );
 }
 
-// ─── MegaIcon — small light tile with a thin-line glyph + blue accent ─
+// ─── MegaIcon — bold on-brand tile mark ──────────────────────────────
 //
-// Twenty/Stripe-style icon set. Every icon is a 36×36 sharp-cornered
-// tile in white, with a layered shadow stack that gives it depth:
-//   • inset top-highlight (subtle white-on-white gleam at the top edge)
-//   • hairline ring at ~8% black (the visible card border)
-//   • soft offset drop shadow underneath (1px down, 2px blur)
-// Glyph is drawn in dark ink with one element in brand-blue as the
-// focal accent. Matches the reference's "card raised on the surface"
-// feel rather than the previous "black sticker" treatment.
+// Each icon is a 44×44 sharp-cornered tile filled with brand blue and
+// holding a single white glyph at 24×24. The whole thing reads at a
+// glance — no fiddly line-art at micro scales, no mixing line + fill
+// across the set. Visually descended from the Resonate chevron mark:
+// solid blue plates with a confident white symbol.
 function MegaIcon({ kind }: { kind: MegaIconKey }) {
-  // Shared icon scaffold: light filled tile + layered shadow + thin
-  // dark glyph layer.
+  // Solid blue plate with a hairline accent-deep ring + soft drop
+  // shadow so the tile reads as a raised on-brand chip on the menu.
   const TileWrap = ({ children }: { children: React.ReactNode }) => (
     <span
       aria-hidden
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center"
+      className="inline-flex h-11 w-11 shrink-0 items-center justify-center"
       style={{
-        background: T.surface,
+        background: T.accent,
         boxShadow: [
-          // Inset top-edge highlight — a sliver of brighter white that
-          // catches the "light" and makes the tile read as raised.
-          "inset 0 1px 0 rgba(255,255,255,0.9)",
-          // Hairline ring — the visible card border.
-          `0 0 0 1px ${T.ring}`,
-          // Soft drop shadow — sits the tile gently on the surface.
-          "0 1px 2px rgba(10,10,16,0.06)",
-          "0 2px 6px -2px rgba(10,10,16,0.08)",
+          "inset 0 1px 0 rgba(255,255,255,0.22)",
+          `0 0 0 1px ${PALETTE.blueDark}`,
+          "0 1px 2px rgba(10,10,16,0.08)",
+          "0 4px 10px -4px rgba(59,130,246,0.30)",
         ].join(", "),
       }}
     >
       {children}
     </span>
   );
-  // Glyph colors — dark for the body of the glyph, brand-blue for the
-  // accent piece. ~80% alpha on ink so the glyph reads as a "thin-line
-  // graphite" mark rather than full-saturation black.
-  const FG = "rgba(10,10,16,0.78)";
-  const ACC = T.accent;
+
+  // Single glyph color — white on the blue tile. One consistent stroke
+  // weight (1.8) and one consistent fill style across all eight marks.
+  const FG = "#ffffff";
 
   switch (kind) {
     // ── PLATFORM ──
-    // Streaming voice → audio waveform with one taller bar in accent.
+    // Streaming voice → 5 vertical bars, center tallest (mini waveform).
     case "stream":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <line x1="3"  y1="9" x2="3"  y2="9"  stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="6"  y1="6" x2="6"  y2="12" stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="9"  y1="3" x2="9"  y2="15" stroke={ACC} strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="12" y1="5" x2="12" y2="13" stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
-            <line x1="15" y1="7" x2="15" y2="11" stroke={FG} strokeWidth="1.5" strokeLinecap="round" />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="3"  y="10" width="2.4" height="4"  fill={FG} />
+            <rect x="7"  y="7"  width="2.4" height="10" fill={FG} />
+            <rect x="11" y="4"  width="2.4" height="16" fill={FG} />
+            <rect x="15" y="7"  width="2.4" height="10" fill={FG} />
+            <rect x="19" y="10" width="2.4" height="4"  fill={FG} />
           </svg>
         </TileWrap>
       );
 
-    // Voice library → stack of 3 horizontal rows with the top row in accent.
+    // Voice library → three stacked solid rows with a left rail.
     case "voice-library":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="3"   y="3.5" width="12" height="3" stroke={ACC} strokeWidth="1.4" />
-            <rect x="3"   y="7.5" width="12" height="3" stroke={FG}  strokeWidth="1.4" />
-            <rect x="3"   y="11.5" width="12" height="3" stroke={FG}  strokeWidth="1.4" />
-            <circle cx="5.5" cy="5"  r="0.7" fill={ACC} />
-            <circle cx="5.5" cy="9"  r="0.7" fill={FG}  />
-            <circle cx="5.5" cy="13" r="0.7" fill={FG}  />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4"  width="18" height="4" fill={FG} />
+            <rect x="3" y="10" width="18" height="4" fill={FG} opacity="0.85" />
+            <rect x="3" y="16" width="18" height="4" fill={FG} opacity="0.55" />
           </svg>
         </TileWrap>
       );
 
-    // Telephony → handset glyph with accent signal arc.
+    // Telephony → solid handset shape (no thin line-art, just a bold
+    // silhouette that reads at thumb size).
     case "telephony":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path
-              d="M4 4 L 7 4 L 8 7 L 6.5 8.5 Q 8.5 11.5 11 13 L 12 11.5 L 15 12 L 15 15 Q 9 15 4 10 Z"
-              stroke={FG}
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-              strokeLinecap="round"
+              d="M5 4 L 9.5 4 L 11 8.5 L 8.5 10.5 Q 11 14.5 14 16 L 15.5 13.5 L 20 15 L 20 19 Q 11 19.5 5 13 Z"
+              fill={FG}
             />
-            <path d="M11 5 Q 13 5 13 7"  stroke={ACC} strokeWidth="1.4" strokeLinecap="round" fill="none" />
-            <path d="M11 3 Q 15 3 15 7"  stroke={ACC} strokeWidth="1.4" strokeLinecap="round" fill="none" opacity="0.6" />
           </svg>
         </TileWrap>
       );
 
-    // Evals → line chart with one peak dot in accent.
+    // Evals → two solid bars + a peak indicator (analytics).
     case "evals":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <polyline
-              points="3,12 6,10 9,11 12,5 15,7"
-              fill="none"
-              stroke={FG}
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            <line x1="3" y1="14.5" x2="15" y2="14.5" stroke={FG} strokeWidth="1" strokeDasharray="1.5 1.5" opacity="0.4" />
-            <circle cx="12" cy="5" r="1.6" fill={ACC} />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="4"  y="13" width="3.5" height="7" fill={FG} opacity="0.7" />
+            <rect x="10" y="9"  width="3.5" height="11" fill={FG} opacity="0.85" />
+            <rect x="16" y="5"  width="3.5" height="15" fill={FG} />
           </svg>
         </TileWrap>
       );
 
     // ── SOLUTIONS ──
-    // Customer support → two speech bubbles, the smaller one in accent.
+    // Customer support → solid speech bubble with tail.
     case "support":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path
-              d="M3 4 H 13 V 9 H 6 L 4 11 V 9 H 3 Z"
-              stroke={FG}
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            <path
-              d="M8 12 H 15 V 15 H 12 L 11 16 V 15 H 8 Z"
-              fill={ACC}
-              stroke="none"
+              d="M4 5 H 20 V 16 H 10 L 6 20 V 16 H 4 Z"
+              fill={FG}
             />
           </svg>
         </TileWrap>
       );
 
-    // Outbound → a contact row with an arrow pointing right (accent).
+    // Outbound → bold right-arrow with stem (call going out).
     case "outbound":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <circle cx="6" cy="6" r="2" stroke={FG} strokeWidth="1.4" />
-            <path d="M2.5 14 Q 2.5 10 6 10 Q 9.5 10 9.5 14" stroke={FG} strokeWidth="1.4" strokeLinecap="round" fill="none" />
-            <line x1="11" y1="9" x2="15.5" y2="9" stroke={ACC} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M14 7 L 15.5 9 L 14 11" stroke={ACC} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12 H 17" stroke={FG} strokeWidth="2.4" strokeLinecap="square" />
+            <path d="M14 6 L 21 12 L 14 18 Z" fill={FG} />
           </svg>
         </TileWrap>
       );
 
-    // Healthcare → clipboard with a checkmark in accent.
+    // Healthcare → plus / cross shape (medical glyph).
     case "healthcare":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="4" y="4" width="10" height="11" stroke={FG} strokeWidth="1.4" />
-            <rect x="6.5" y="2.5" width="5" height="2.5" fill={FG} />
-            <path d="M6 10 L 8 12 L 12 8" stroke={ACC} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <rect x="10" y="3"  width="4" height="18" fill={FG} />
+            <rect x="3"  y="10" width="18" height="4" fill={FG} />
           </svg>
         </TileWrap>
       );
 
-    // Receptionist → bell with accent ringer dot.
+    // Receptionist → solid bell silhouette with clapper.
     case "receptionist":
       return (
         <TileWrap>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path
-              d="M4 12 Q 4 6 9 6 Q 14 6 14 12 Z"
-              stroke={FG}
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-              fill="none"
+              d="M5 16 Q 5 6 12 6 Q 19 6 19 16 Z"
+              fill={FG}
             />
-            <line x1="3" y1="12.5" x2="15" y2="12.5" stroke={FG} strokeWidth="1.4" strokeLinecap="round" />
-            <line x1="9" y1="4" x2="9" y2="6" stroke={FG} strokeWidth="1.4" strokeLinecap="round" />
-            <circle cx="9" cy="15" r="1.1" fill={ACC} />
+            <rect x="4" y="16" width="16" height="2.4" fill={FG} />
+            <rect x="11" y="19" width="2" height="2.4" fill={FG} />
           </svg>
         </TileWrap>
       );
