@@ -378,44 +378,56 @@ function SectionSpacer({
   spaceY?: number;
 }) {
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none relative hidden md:block"
-      style={{ height, marginTop: spaceY, marginBottom: spaceY }}
-    >
-      <span
-        className="absolute"
-        style={{
-          top: 0,
-          left: RAIL_INSET,
-          right: RAIL_INSET,
-          height: 1,
-          background: RAIL_STROKE,
-        }}
+    <>
+      {/* Mobile: a single, consistent vertical gap between every
+          section. No rail chrome on phone — page rails are hidden
+          anyway, and the rails-only spacer collapsed entirely before. */}
+      <div
+        aria-hidden
+        className="pointer-events-none md:hidden"
+        style={{ height: 80 }}
       />
-      <span
-        className="absolute"
-        style={{
-          bottom: 0,
-          left: RAIL_INSET,
-          right: RAIL_INSET,
-          height: 1,
-          background: RAIL_STROKE,
-        }}
-      />
-      <span
-        className="absolute inset-y-px"
-        style={{
-          left: RAIL_INSET,
-          right: RAIL_INSET,
-          backgroundImage: `repeating-linear-gradient(to right, ${RAIL_TICK} 0 1px, transparent 1px 11px)`,
-          WebkitMaskImage:
-            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
-          maskImage:
-            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
-        }}
-      />
-    </div>
+      {/* Desktop / tablet: the full rail-bound spacer with dashed
+          ticks running between the two page rails. */}
+      <div
+        aria-hidden
+        className="pointer-events-none relative hidden md:block"
+        style={{ height, marginTop: spaceY, marginBottom: spaceY }}
+      >
+        <span
+          className="absolute"
+          style={{
+            top: 0,
+            left: RAIL_INSET,
+            right: RAIL_INSET,
+            height: 1,
+            background: RAIL_STROKE,
+          }}
+        />
+        <span
+          className="absolute"
+          style={{
+            bottom: 0,
+            left: RAIL_INSET,
+            right: RAIL_INSET,
+            height: 1,
+            background: RAIL_STROKE,
+          }}
+        />
+        <span
+          className="absolute inset-y-px"
+          style={{
+            left: RAIL_INSET,
+            right: RAIL_INSET,
+            backgroundImage: `repeating-linear-gradient(to right, ${RAIL_TICK} 0 1px, transparent 1px 11px)`,
+            WebkitMaskImage:
+              "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+            maskImage:
+              "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+          }}
+        />
+      </div>
+    </>
   );
 }
 
@@ -466,16 +478,24 @@ function NavBar() {
     setOpenMenu(key);
   };
 
-  // Close menus on Escape and on outside click (still useful for
-  // keyboard/touch users)
+  // Close menus on Escape and on outside-click. Covers both desktop
+  // mega-menus (openMenu) and the mobile dropdown (mobileOpen). The
+  // outside-click guard uses [data-osto-nav] on the <header>, so any
+  // click inside the nav region keeps the menu open.
   useEffect(() => {
-    if (!openMenu) return;
+    if (!openMenu && !mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpenMenu(null);
+      if (e.key === "Escape") {
+        setOpenMenu(null);
+        setMobileOpen(false);
+      }
     };
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-osto-nav]")) setOpenMenu(null);
+      if (!target.closest("[data-osto-nav]")) {
+        setOpenMenu(null);
+        setMobileOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onClick);
@@ -483,24 +503,9 @@ function NavBar() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onClick);
     };
-  }, [openMenu]);
+  }, [openMenu, mobileOpen]);
 
   useEffect(() => () => cancelClose(), []);
-
-  // Lock body scroll when the mobile sheet is open + close on Escape.
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [mobileOpen]);
 
   return (
     <header
@@ -701,10 +706,14 @@ function NavBar() {
   );
 }
 
-// ─── Mobile nav sheet ─────────────────────────────────────────────────
-// Full-viewport drawer that opens from the top edge under the capsule.
-// Lists Platform + Solutions as flat sections with short descriptors,
-// then the secondary links (Pricing, Docs) and a Sign-in row.
+// ─── Mobile nav dropdown ──────────────────────────────────────────────
+// Floating card that opens BELOW the hamburger button — same pattern as
+// the desktop mega-menu, just narrower and right-anchored. Mounted via
+// `position: absolute` inside the nav header, so [data-osto-nav] still
+// captures clicks for the parent's outside-click → close logic.
+//
+// No portal, no scrim, no body-scroll lock. The dropdown is just a
+// card; everything else on the page stays visible.
 function MobileNavSheet({
   open,
   onClose,
@@ -712,116 +721,85 @@ function MobileNavSheet({
   open: boolean;
   onClose: () => void;
 }) {
+  if (!open) return null;
   return (
     <div
-      role="dialog"
-      aria-modal={open}
-      aria-hidden={!open}
-      className="fixed inset-x-0 top-0 z-40 md:hidden"
+      data-osto-mega
+      role="menu"
+      className="absolute left-4 right-4 top-full mt-3 overflow-hidden md:hidden"
       style={{
-        // Sits below the nav capsule (which is z-50). Height auto-grows
-        // to fit content; max-height capped to viewport so very long
-        // lists scroll inside the sheet.
-        maxHeight: "100dvh",
         background: T.surface,
-        boxShadow: `0 24px 48px -16px rgba(10,10,16,0.18)`,
-        // Slide + fade in from the top edge. Off-screen when closed.
-        transform: open ? "translateY(0)" : "translateY(-12px)",
-        opacity: open ? 1 : 0,
-        pointerEvents: open ? "auto" : "none",
-        transition:
-          "transform 260ms cubic-bezier(0.2,0.8,0.2,1), opacity 220ms ease-out",
-        // Leave room at the top for the nav capsule (top-4 = 16px +
-        // capsule height ~52px + a small buffer).
-        paddingTop: 84,
-        paddingBottom: 28,
-        paddingInline: 20,
+        boxShadow: E.card,
+        // Capped so the dropdown never extends past the viewport.
+        // 78vh leaves visible page underneath, signaling "this is a
+        // dropdown, not a takeover."
+        maxHeight: "78dvh",
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
       }}
     >
-      {MOBILE_NAV_SECTIONS.map((section) => (
-        <div key={section.heading} className="mb-6">
-          <p
-            className="px-2 text-[12px] font-medium"
-            style={{
-              color: T.inkSubtle,
-              fontFamily: T.fontMono,
-              letterSpacing: "0.04em",
-            }}
-          >
-            {section.heading}
-          </p>
-          <ul className="mt-2 flex flex-col">
-            {section.items.map((item) => (
-              <li key={item.label}>
-                <Link
-                  href={item.href}
-                  onClick={onClose}
-                  className="flex flex-col gap-y-1 px-2 py-3 active:bg-black/[0.04]"
-                  style={{ color: T.ink }}
-                >
-                  <span
-                    className="text-[15px] font-medium"
-                    style={{ letterSpacing: "-0.012em" }}
+      <div style={{ paddingBlock: 12, paddingInline: 12 }}>
+        {MOBILE_NAV_SECTIONS.map((section) => (
+          <div key={section.heading} className="mb-3">
+            <p
+              className="px-2 text-[10.5px] font-medium uppercase"
+              style={{
+                color: T.inkSubtle,
+                fontFamily: T.fontMono,
+                letterSpacing: "0.06em",
+                paddingBlock: 6,
+              }}
+            >
+              {section.heading}
+            </p>
+            <ul className="flex flex-col">
+              {section.items.map((item) => (
+                <li key={item.label}>
+                  <Link
+                    href={item.href}
+                    onClick={onClose}
+                    className="block px-2 py-2.5 text-[14px] font-medium active:bg-black/[0.04]"
+                    style={{ color: T.ink, letterSpacing: "-0.012em" }}
                   >
                     {item.label}
-                  </span>
-                  <span
-                    className="text-[13px]"
-                    style={{
-                      color: T.inkMid,
-                      letterSpacing: "-0.012em",
-                    }}
-                  >
-                    {item.desc}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
 
-      {/* Secondary links + sign-in. Stacked as a quiet row beneath the
-          two sections. */}
-      <div
-        className="mt-2 flex flex-col"
-        style={{ borderTop: `1px solid ${T.ring}` }}
-      >
-        <Link
-          href="#pricing"
-          onClick={onClose}
-          className="flex items-center justify-between px-2 py-4 active:bg-black/[0.04]"
-          style={{ color: T.ink }}
+        {/* Secondary links — separated by a hairline above. */}
+        <div
+          className="flex flex-col"
+          style={{
+            borderTop: `1px solid ${T.ring}`,
+            paddingTop: 4,
+            marginTop: 4,
+          }}
         >
-          <span className="text-[15px] font-medium" style={{ letterSpacing: "-0.012em" }}>
-            Pricing
-          </span>
-          <NavChevron />
-        </Link>
-        <Link
-          href="#docs"
-          onClick={onClose}
-          className="flex items-center justify-between px-2 py-4 active:bg-black/[0.04]"
-          style={{ color: T.ink, borderTop: `1px solid ${T.ring}` }}
-        >
-          <span className="text-[15px] font-medium" style={{ letterSpacing: "-0.012em" }}>
-            Docs
-          </span>
-          <NavChevron />
-        </Link>
-        <Link
-          href="#"
-          onClick={onClose}
-          className="flex items-center justify-between px-2 py-4 active:bg-black/[0.04]"
-          style={{ color: T.ink, borderTop: `1px solid ${T.ring}` }}
-        >
-          <span className="text-[15px] font-medium" style={{ letterSpacing: "-0.012em" }}>
-            Sign in
-          </span>
-          <NavChevron />
-        </Link>
+          {[
+            { label: "Pricing", href: "#pricing" },
+            { label: "Docs", href: "#docs" },
+            { label: "Sign in", href: "#" },
+          ].map((row) => (
+            <Link
+              key={row.label}
+              href={row.href}
+              onClick={onClose}
+              className="flex items-center justify-between px-2 py-2.5 active:bg-black/[0.04]"
+              style={{ color: T.ink }}
+            >
+              <span
+                className="text-[14px] font-medium"
+                style={{ letterSpacing: "-0.012em" }}
+              >
+                {row.label}
+              </span>
+              <NavChevron />
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1819,10 +1797,13 @@ function LogoStrip() {
             // Tailwind so they can shrink on mobile.
           }}
         >
-          {LOGO_MARKS.map((logo) => (
+          {LOGO_MARKS.map((logo, i) => (
             <li
               key={logo.name}
-              className="inline-flex items-center"
+              // Last logo (Ramp) hides on phone so the strip is a clean
+              // 4-up row at 375px width instead of orphaning one logo
+              // on a second line. Re-appears at sm+.
+              className={`inline-flex items-center ${i === LOGO_MARKS.length - 1 ? "hidden sm:inline-flex" : ""}`}
               style={{ gap: S.xs, color: logoInk }}
               aria-label={logo.name}
             >
@@ -2323,7 +2304,7 @@ function Field({
 function ProblemSection() {
   return (
     <section className="pt-4">
-      <div className="mx-auto max-w-[1240px] px-6">
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-6">
         <SectionHeading>
           Building a voice agent the old way takes{" "}
           <span style={{ color: T.accent }}>months.</span>
@@ -2371,7 +2352,7 @@ function ProblemSection() {
         />
       </div>
 
-      <div className="mx-auto max-w-[1240px] px-6">
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-6">
         <DeltaRow />
       </div>
     </section>
@@ -2555,12 +2536,13 @@ function SketchPortrait({
    *  feature tile so the portrait reads against the dark surface. */
   onBrand?: boolean;
 }) {
+  // 48×48 on phone (better proportional balance with the 14px name +
+  // 12px role pair next to it), 40×40 on tablet+ where the cards are
+  // narrower and the smaller portrait reads as a discrete UI tile.
   return (
     <span
-      className="relative block shrink-0 overflow-hidden"
+      className="relative block h-12 w-12 shrink-0 overflow-hidden sm:h-10 sm:w-10"
       style={{
-        width: 40,
-        height: 40,
         boxShadow: onBrand
           ? "0 0 0 1px rgba(255,255,255,0.24)"
           : "0 0 0 1px rgba(10,10,16,0.08)",
@@ -2570,7 +2552,7 @@ function SketchPortrait({
         src={src}
         alt={alt}
         fill
-        sizes="40px"
+        sizes="(max-width: 640px) 48px, 40px"
         style={{ objectFit: "cover" }}
       />
     </span>
@@ -2796,7 +2778,7 @@ function LogoFeatureTile({ s }: { s: LogoFeatureCard }) {
     >
       <div className="flex items-center">{s.mark}</div>
       <p
-        className="mt-10 text-pretty text-[18px] leading-[26px] md:mt-12 md:text-[20px] md:leading-[30px]"
+        className="mt-6 text-pretty text-[17px] leading-[26px] md:mt-12 md:text-[20px] md:leading-[30px]"
         style={{
           color: T.ink,
           letterSpacing: "-0.014em",
@@ -2805,7 +2787,7 @@ function LogoFeatureTile({ s }: { s: LogoFeatureCard }) {
       >
         &ldquo;{s.quote}&rdquo;
       </p>
-      <div className="mt-8 flex items-center justify-between gap-x-3">
+      <div className="mt-6 flex items-center justify-between gap-x-3 md:mt-8">
         <div>
           <p
             className="text-[13px] font-medium leading-[18px]"
@@ -2850,7 +2832,7 @@ function BrandFeatureTile({ s }: { s: BrandFeatureCard }) {
         {s.company}
       </p>
       <p
-        className="mt-12 text-pretty text-[18px] leading-[26px] md:mt-16 md:text-[20px] md:leading-[30px]"
+        className="mt-6 text-pretty text-[17px] leading-[26px] md:mt-16 md:text-[20px] md:leading-[30px]"
         style={{
           color: "#ffffff",
           letterSpacing: "-0.014em",
@@ -2858,7 +2840,7 @@ function BrandFeatureTile({ s }: { s: BrandFeatureCard }) {
         }}
         dangerouslySetInnerHTML={{ __html: `&ldquo;${s.quote}&rdquo;` }}
       />
-      <div className="mt-8 flex items-center justify-between gap-x-3">
+      <div className="mt-6 flex items-center justify-between gap-x-3 md:mt-8">
         <div>
           <p
             className="text-[13px] font-medium leading-[18px]"
@@ -2969,7 +2951,7 @@ function PricingCalculator() {
     <section className="px-5 pt-4 sm:px-6" id="calculator">
       <div className="mx-auto max-w-[1180px]">
         <h2
-          className="mx-auto max-w-[680px] text-balance text-center text-[28px] leading-[34px] tracking-[-0.7px] sm:text-[32px] sm:leading-[38px] sm:tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
+          className="max-w-[680px] text-balance text-[28px] leading-[34px] tracking-[-0.7px] sm:text-[32px] sm:leading-[38px] sm:tracking-[-0.8px] md:text-[40px] md:leading-[44px] md:tracking-[-1px]"
           style={{
             fontFamily: T.fontDisplay,
             fontWeight: 500,
@@ -2980,7 +2962,7 @@ function PricingCalculator() {
           <span style={{ color: T.accent }}>speak.</span>
         </h2>
         <p
-          className="mx-auto mt-3 max-w-[480px] text-pretty text-center text-[14px] leading-[24px]"
+          className="mt-3 max-w-[480px] text-pretty text-[14px] leading-[24px]"
           style={{ color: T.inkSoft, letterSpacing: "-0.14px" }}
         >
           Drag the sliders, toggle the modules. The total updates as you go.
@@ -3461,7 +3443,7 @@ const CUSTOM_FEATURES = [
 
 function Pricing() {
   return (
-    <section className="px-6 pt-4" id="pricing">
+    <section className="px-5 pt-4 sm:px-6" id="pricing">
       <div className="mx-auto max-w-[1180px]">
         <SectionHeading>
           Pricing scales with the{" "}
@@ -3674,7 +3656,7 @@ function PriceAmount({
 // ─── Why trust Resonate — 3 credibility pillars ───────────────────────────
 function WhyTrust() {
   return (
-    <section className="px-6 pt-4">
+    <section className="px-5 pt-4 sm:px-6">
       <div className="mx-auto max-w-[1180px]">
         <SectionHeading>
           Built by speech{" "}
@@ -3863,18 +3845,19 @@ function FAQ() {
 function FinalCTA() {
   return (
     // Full-bleed: card extends edge-to-edge to the global page rails on
-    // all four sides. Left/right edges land at RAIL_INSET; top/bottom
-    // are pulled flush against the surrounding SectionSpacer rails via
-    // negative vertical margins (cancels the spacer's 56px outer gap).
+    // all four sides. Left/right edges land at RAIL_INSET. On md+ the
+    // top/bottom are pulled flush against the surrounding SectionSpacer
+    // rails via negative vertical margins (cancels the spacer's 56px
+    // outer gap). On phone the mobile SectionSpacer is a simple 80px
+    // block with no outer margin, so we DON'T apply negative margins
+    // there — doing so would clip the bottom of the CTA into the footer.
     <section className="relative">
       <div
-        className="relative overflow-hidden px-6 py-12 sm:px-8 sm:py-14 md:px-14 md:py-20"
+        className="relative overflow-hidden px-6 py-12 sm:px-8 sm:py-14 md:px-14 md:py-20 md:[margin-top:-56px] md:[margin-bottom:-56px]"
         style={{
           background: BUTTON_BRAND_BG,
           marginLeft: RAIL_INSET,
           marginRight: RAIL_INSET,
-          marginTop: -56,
-          marginBottom: -56,
         }}
       >
         <div className="text-center">
@@ -3954,12 +3937,11 @@ function Footer() {
     // copyright row gets generous breathing room.
     <footer className="relative">
       <div
-        className="px-6 pb-20 pt-10 sm:px-8 sm:pb-24 sm:pt-12 md:px-12 md:pb-32 md:pt-14"
+        className="px-6 pb-20 pt-10 sm:px-8 sm:pb-24 sm:pt-12 md:px-12 md:pb-32 md:pt-14 md:[margin-top:-56px]"
         style={{
           background: T.panel,
           marginLeft: RAIL_INSET,
           marginRight: RAIL_INSET,
-          marginTop: -56,
         }}
       >
        <div className="mx-auto max-w-[1120px]">
@@ -4159,12 +4141,14 @@ function CertChip({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Shared primitives ────────────────────────────────────────────────
+/**
+ * SectionHeading — H2 always left-aligned. Used by every section that
+ * doesn't bring its own H2 styling.
+ */
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  // H2 uses fluid clamp between mobile (32) and desktop (40). Tracking
-  // and leading scale with size via em-based units.
   return (
     <h2
-      className="text-balance md:text-center md:px-10"
+      className="text-balance"
       style={{
         fontFamily: T.fontDisplay,
         fontWeight: 500,

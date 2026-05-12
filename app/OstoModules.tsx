@@ -80,28 +80,27 @@ const RAIL_STROKE = PALETTE.ring;
 export function OstoModules() {
   return (
     <section style={{ color: T.ink }}>
-      {/* Heading — stays in the centered max-width wrapper */}
-      <div className="mx-auto max-w-[1240px] px-6">
-        <div className="text-center">
-          <h2
-            className="mx-auto max-w-[780px] text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[44px] md:leading-[48px] md:tracking-[-1.1px]"
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontWeight: 500,
-              color: T.ink,
-            }}
-          >
-            Four pieces of the voice agent,
-            handled inside one&nbsp;<span style={{ color: BRAND }}>SDK</span>.
-          </h2>
-          <p
-            className="mx-auto mt-5 max-w-[560px] text-pretty text-[16px] leading-[24px] md:text-[17px] md:leading-[26px]"
-            style={{ color: T.inkSoft, letterSpacing: "-0.18px" }}
-          >
-            Streaming speech, voice cloning, turn-taking, and bi-directional
-            audio on a single stream you bill from one&nbsp;vendor.
-          </p>
-        </div>
+      {/* Heading — left-aligned for consistency with the rest of the
+          section headings on the page. */}
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-6">
+        <h2
+          className="max-w-[780px] text-balance text-[32px] leading-[38px] tracking-[-0.8px] md:text-[44px] md:leading-[48px] md:tracking-[-1.1px]"
+          style={{
+            fontFamily: "var(--font-sans)",
+            fontWeight: 500,
+            color: T.ink,
+          }}
+        >
+          Four pieces of the voice agent,
+          handled inside one&nbsp;<span style={{ color: BRAND }}>SDK</span>.
+        </h2>
+        <p
+          className="mt-5 max-w-[560px] text-pretty text-[16px] leading-[24px] md:text-[17px] md:leading-[26px]"
+          style={{ color: T.inkSoft, letterSpacing: "-0.18px" }}
+        >
+          Streaming speech, voice cloning, turn-taking, and bi-directional
+          audio on a single stream you bill from one&nbsp;vendor.
+        </p>
       </div>
 
       {/* Bento — full-bleed: extends edge-to-edge to V2's global page rails.
