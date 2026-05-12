@@ -1568,67 +1568,61 @@ function HeroWaveform() {
     return h;
   });
 
-  // Geometry. 128 bars × (4px wide + 3px gap) = ~896px cluster — wide
-  // enough to span most of the hero on desktop. Edges fade via a CSS
-  // mask, so the bars dissolve into the page background rather than
-  // ending in a hard edge with gray pips.
+  // SVG-based rendering. Switched away from a flex row of percentage-
+  // height <span> bars because iOS Safari (and a few Android browsers)
+  // resolve percentage heights on flex items with align-items:center to
+  // 0 — the entire wave disappeared on phones. SVG's viewBox math is
+  // bulletproof: every bar's y/height is computed in viewBox units that
+  // the renderer scales deterministically.
+  const VB_W = 1000;
+  const VB_H = 200;
   const BAR_W = 4;
-  const GAP_PX = 3;
-  // Edge fade is applied via the wrapper class `resonate-wave-mask`,
-  // not inline. The mask is suppressed below the `sm` breakpoint so
-  // iOS Safari (which intermittently renders mask-image as fully
-  // transparent on small viewports) can't make the entire strip vanish
-  // on a phone. Desktop still gets the soft falloff.
+  const GAP = (VB_W - N * BAR_W) / (N - 1); // perfect edge-to-edge fill
+  const startX = 0;
   return (
     <div
       aria-hidden
       className="relative mx-auto"
       style={{
-        // Stage = cluster width on desktop (~896px). Shrinks on phone
-        // so the wave stays inside the viewport. Mobile sized so the
-        // strip lands above the first-viewport fold once the hero has
-        // its full paddingTop applied.
         width: "clamp(320px, 96vw, 960px)",
         height: "clamp(140px, 24vw, 220px)",
       }}
     >
-      <div
-        className="resonate-wave-mask flex h-full w-full items-center justify-center"
-        style={{ gap: GAP_PX }}
+      <svg
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="none"
+        className="resonate-wave-mask block"
+        style={{ overflow: "visible" }}
       >
         {bars.map((h, i) => {
           const t = i / (N - 1);
           let bg: string;
-          // Soft blue → blue → deep blue across the strip. No more gray
-          // edge pips — the CSS mask on the container fades the wave
-          // smoothly into the page background at both ends.
-          if (t < 0.30 || t > 0.78) {
-            bg = PALETTE.blueSoft;
-          } else if (t < 0.55) {
-            bg = PALETTE.blue;
-          } else {
-            bg = PALETTE.blueDeep;
-          }
+          if (t < 0.30 || t > 0.78) bg = PALETTE.blueSoft;
+          else if (t < 0.55) bg = PALETTE.blue;
+          else bg = PALETTE.blueDeep;
+          const barH = h * VB_H;
+          const x = startX + i * (BAR_W + GAP);
+          const y = (VB_H - barH) / 2;
           return (
-            <span
+            <rect
               key={i}
               className="resonate-bar"
+              x={x}
+              y={y}
+              width={BAR_W}
+              height={barH}
+              fill={bg}
               style={{
-                // Fixed 4px bars — slim instrumentation, not chunky bar
-                // chart. The container's mask handles edge falloff; the
-                // glow renders on every bar uniformly.
-                display: "inline-block",
-                width: BAR_W,
-                height: `${h * 100}%`,
-                borderRadius: 0,
-                background: bg,
-                boxShadow: `0 0 8px ${bg}55`,
+                transformBox: "fill-box",
+                transformOrigin: "center",
                 animationDelay: `${(i * 22) % 1400}ms`,
               }}
             />
           );
         })}
-      </div>
+      </svg>
       {/* Time labels — anchor at the stage's outer edges, which now
           equal the wave's edges. Live indicator sits in the middle. */}
       <div
