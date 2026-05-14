@@ -4083,17 +4083,22 @@ function FinalCtaRailField() {
   // rails stay the dominant rhythm.
   const tickRows = [10, 32, 68, 90];
 
-  // Radial fade-mask: transparent in the center so the rail pattern
-  // visibly weakens behind the headline / CTAs, opaque toward the
-  // edges so the rails register strongly there. Ellipse is wider
-  // than tall so the centered text band is quiet across the full
-  // headline width.
+  // Radial fade-mask (alpha mode — the CSS default). In alpha-mode,
+  // the mask's ALPHA channel controls visibility: alpha 1 shows the
+  // pattern, alpha 0 hides it. So we ramp from transparent (hide) at
+  // the center to fully opaque black (show) at the band edges. The
+  // previous version's ellipse was too small (55% × 70%) and stops
+  // were bunched, so the fully-opaque ring was a thin strip near the
+  // outer wall — easily missed. Expanding to 75% × 85% with a wider
+  // ramp leaves a clear, visible rail band around the perimeter.
   const centerFade =
-    "radial-gradient(ellipse 55% 70% at 50% 50%, transparent 0%, rgba(0,0,0,0.45) 35%, #000 70%)";
+    "radial-gradient(ellipse 75% 85% at 50% 50%, transparent 0%, transparent 25%, rgba(0,0,0,0.5) 55%, #000 85%)";
 
   // Single dashed column — reused per rail. 4px dash on 6px gap.
+  // Bumped white opacity 0.18 -> 0.30 so the rails read confidently
+  // through the partial mask in the ramp zone.
   const railBg =
-    "repeating-linear-gradient(to bottom, rgba(255,255,255,0.18) 0 4px, transparent 4px 10px)";
+    "repeating-linear-gradient(to bottom, rgba(255,255,255,0.30) 0 4px, transparent 4px 10px)";
 
   return (
     <div
