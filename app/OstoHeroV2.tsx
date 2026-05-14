@@ -3903,12 +3903,11 @@ function FinalCTA() {
           background: BUTTON_BRAND_BG,
         }}
       >
-        {/* Decorative dashed-rail margins — same drafting/blueprint
+        {/* Decorative dashed-rail field — same drafting/blueprint
             vocabulary as the page-rails on light sections, transposed
-            to brand blue. Inner edge fades so the centered headline
-            stays the focal point. Hidden on phone (band is tight). */}
-        <FinalCtaRailPattern side="left" />
-        <FinalCtaRailPattern side="right" />
+            to brand blue. Fills the entire band; the radial fade
+            above settles it down behind the headline + CTAs. */}
+        <FinalCtaRailField />
 
         <div className="relative z-10 text-center">
           <h1
@@ -4059,100 +4058,95 @@ function BrandPanelRailPattern() {
   );
 }
 
-// ─── FinalCtaRailPattern ──────────────────────────────────────────────
-// Decorative dashed page-rails transposed to the brand-blue band. Same
-// drafting-margin vocabulary used by the light-page PageRails: vertical
-// dashed lines at decreasing opacity stepping inward, plus a single
-// horizontal hairline at top and bottom that anchors the rails. A
-// single tick ("scanner head") slides down the brightest rail on a
-// slow loop. Inner edge fades so the headline stays the focal point.
-function FinalCtaRailPattern({ side }: { side: "left" | "right" }) {
-  // Each rail is a vertical dashed line. Five lines per side, stepping
-  // inward; the outermost is brightest, the innermost is the faintest.
-  // Distance from the outer edge in px — small enough to read as a
-  // "drafting gutter," large enough to register on a 1280px viewport.
-  const rails = [
-    { x: 12, o: 0.36 }, // outermost
-    { x: 24, o: 0.26 },
-    { x: 44, o: 0.18 },
-    { x: 72, o: 0.12 },
-    { x: 108, o: 0.07 }, // innermost, almost gone before the fade kicks in
-  ];
+// ─── FinalCtaRailField ────────────────────────────────────────────────
+// Decorative dashed-rail field that fills the entire FinalCTA band.
+// A column of vertical dashed lines is tiled every 32px across the
+// full width; a radial fade-mask in the center weakens the pattern
+// behind the headline + CTAs so the content sits in a calm spotlight
+// while the rails read stronger toward the edges. Horizontal tick
+// rows at four heights punctuate the field with drafting-sheet
+// ruling. A pair of scanner ticks slides down the outermost left and
+// right rails on a slow loop.
+function FinalCtaRailField() {
+  // Column spacing in px. 32 reads as a clear drafting rhythm at
+  // 1280px+ viewports without becoming visual noise.
+  const TILE = 32;
+  // Number of rails depends on viewport; we render up to 60 columns
+  // (≈1920px) and let `overflow: hidden` on the parent crop them.
+  // Generating the list at render time keeps the JSX simple and the
+  // pattern uniform without needing dynamic measurement.
+  const rails = Array.from({ length: 60 }, (_, i) => i);
 
-  // Short horizontal tick-marks at four heights inside the gutter, like
-  // the ruling marks on an architectural drafting sheet. They span the
-  // rail field (≈100px wide) and use the same dashed pattern as the
-  // verticals.
-  const ticks = [
-    { topPct: 18, w: 96 },
-    { topPct: 38, w: 64 },
-    { topPct: 62, w: 64 },
-    { topPct: 82, w: 96 },
-  ];
+  // Horizontal tick rows — short dashed segments at four heights
+  // that punctuate the vertical field. Same dashed vocabulary as
+  // the verticals (4px dash on 6px gap), at a lower opacity so the
+  // rails stay the dominant rhythm.
+  const tickRows = [10, 32, 68, 90];
 
-  // Inward fade so the rails dissolve into the brand band before the
-  // centered text region.
-  const fade =
-    side === "left"
-      ? "linear-gradient(to right, #000 0%, #000 60%, transparent 100%)"
-      : "linear-gradient(to left,  #000 0%, #000 60%, transparent 100%)";
+  // Radial fade-mask: transparent in the center so the rail pattern
+  // visibly weakens behind the headline / CTAs, opaque toward the
+  // edges so the rails register strongly there. Ellipse is wider
+  // than tall so the centered text band is quiet across the full
+  // headline width.
+  const centerFade =
+    "radial-gradient(ellipse 55% 70% at 50% 50%, transparent 0%, rgba(0,0,0,0.45) 35%, #000 70%)";
 
-  // Dashed-line background: 4px dash + 6px gap, white at the rail's
-  // declared opacity. Repeating-linear-gradient renders the dashes; we
-  // use a fixed background-size so the dash count is predictable.
-  const dashedBg = (opacity: number) =>
-    `repeating-linear-gradient(to bottom, rgba(255,255,255,${opacity}) 0 4px, transparent 4px 10px)`;
+  // Single dashed column — reused per rail. 4px dash on 6px gap.
+  const railBg =
+    "repeating-linear-gradient(to bottom, rgba(255,255,255,0.18) 0 4px, transparent 4px 10px)";
 
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-y-0 z-0 hidden w-[140px] md:block lg:w-[160px]"
+      className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden md:block"
       style={{
-        [side]: 0,
-        WebkitMaskImage: fade,
-        maskImage: fade,
+        WebkitMaskImage: centerFade,
+        maskImage: centerFade,
       }}
     >
-      {/* Vertical dashed rails */}
-      {rails.map((r) => (
+      {/* Vertical dashed rails tiled every TILE px across the band. */}
+      {rails.map((i) => (
         <span
-          key={r.x}
+          key={i}
           className="absolute top-0 bottom-0"
           style={{
-            [side]: `${r.x}px`,
+            left: `${i * TILE}px`,
             width: 1,
-            backgroundImage: dashedBg(r.o),
+            backgroundImage: railBg,
             backgroundRepeat: "repeat-y",
           }}
         />
       ))}
 
-      {/* Horizontal tick marks at four heights spanning the rail
-          gutter — drafting-sheet ruling, anchors the verticals and
-          echoes the dashed section dividers used elsewhere on the
-          site. Outer ticks (closer to top/bottom edges) are wider so
-          the gutter has visible corners. */}
-      {ticks.map((t) => (
+      {/* Horizontal tick rows at four heights — span the full band. */}
+      {tickRows.map((topPct) => (
         <span
-          key={t.topPct}
-          className="absolute"
+          key={topPct}
+          className="absolute left-0 right-0"
           style={{
-            [side]: 12,
-            width: t.w,
-            top: `${t.topPct}%`,
+            top: `${topPct}%`,
             height: 1,
-            backgroundImage: `repeating-linear-gradient(to right, rgba(255,255,255,0.22) 0 4px, transparent 4px 10px)`,
+            backgroundImage:
+              "repeating-linear-gradient(to right, rgba(255,255,255,0.16) 0 4px, transparent 4px 10px)",
           }}
         />
       ))}
 
-      {/* Scanner tick — a short bright segment that slides down the
-          outermost rail on a slow loop. Reads as a printer head /
-          live-scan cue without resorting to AI-startup glyphs. */}
+      {/* Scanner ticks on the outermost left + right rails. */}
       <span
         className="osto-cta-rail-tick absolute"
         style={{
-          [side]: 12,
+          left: 0,
+          width: 1,
+          height: 24,
+          background:
+            "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%)",
+        }}
+      />
+      <span
+        className="osto-cta-rail-tick absolute"
+        style={{
+          right: 0,
           width: 1,
           height: 24,
           background:
