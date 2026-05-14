@@ -4118,13 +4118,17 @@ function FinalCtaRailField() {
             width: 1,
             backgroundImage: railBg,
             backgroundRepeat: "repeat-y",
+            // Stagger the bright pulse per rail. 240ms × index gives
+            // adjacent rails clearly different pulse phases without the
+            // pattern becoming visually chaotic.
+            ["--osto-pulse-delay" as string]: `${(i * 240) % 3200}ms`,
           }}
         />
       ))}
 
       {/* Horizontal tick rows at four heights — span the full band.
           Same flowing-dash animation, scrolling left-to-right. */}
-      {tickRows.map((topPct) => (
+      {tickRows.map((topPct, i) => (
         <span
           key={topPct}
           className="osto-cta-tick-flow absolute left-0 right-0"
@@ -4133,6 +4137,9 @@ function FinalCtaRailField() {
             height: 1,
             backgroundImage:
               "repeating-linear-gradient(to right, rgba(255,255,255,0.16) 0 4px, transparent 4px 10px)",
+            // Stagger horizontal pulses so the four rows don't fire in
+            // unison. 900ms between each gives a comfortable cascade.
+            ["--osto-pulse-delay" as string]: `${i * 900}ms`,
           }}
         />
       ))}
@@ -4724,29 +4731,88 @@ function V2Styles() {
       }
 
       /* ─── FinalCTA grid line flow ────────────────────────────────────
-         The rails and ticks stay anchored; their dashed PATTERNS flow.
-         Animating background-position by exactly one full dash cycle
-         (10px = 4px dash + 6px gap) loops seamlessly. Vertical rails
-         flow top-to-bottom; horizontal ticks flow left-to-right at a
-         slightly different cadence so the grid never feels metronomic. */
+         Two simultaneous motions on the grid:
+         (1) the dashed pattern of each rail / tick scrolls along its
+             axis via background-position — quiet ambient flow;
+         (2) a bright "pulse" segment travels along each rail / tick
+             via a ::before pseudo-element, brighter and clearly
+             visible. The pulse is what reads as "data running through
+             the line"; the pattern flow under it is the supporting
+             texture. */
       @keyframes ostoCtaRailFlow {
         from { background-position: 0 0; }
         to   { background-position: 0 10px; }
       }
       .osto-cta-rail-flow {
         animation: ostoCtaRailFlow 600ms linear infinite;
+        position: relative;
       }
+      .osto-cta-rail-flow::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 28px;
+        background: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba(255,255,255,0.9) 50%,
+          transparent 100%
+        );
+        animation: ostoCtaRailPulse 3200ms linear infinite;
+        animation-delay: var(--osto-pulse-delay, 0ms);
+        will-change: transform;
+      }
+      @keyframes ostoCtaRailPulse {
+        0%   { transform: translateY(-32px); opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: 1; }
+        100% { transform: translateY(calc(100% + 32px)); opacity: 0; }
+      }
+
       @keyframes ostoCtaTickFlow {
         from { background-position: 0 0; }
         to   { background-position: 10px 0; }
       }
       .osto-cta-tick-flow {
         animation: ostoCtaTickFlow 800ms linear infinite;
+        position: relative;
       }
+      .osto-cta-tick-flow::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 28px;
+        background: linear-gradient(
+          to right,
+          transparent 0%,
+          rgba(255,255,255,0.9) 50%,
+          transparent 100%
+        );
+        animation: ostoCtaTickPulse 4200ms linear infinite;
+        animation-delay: var(--osto-pulse-delay, 0ms);
+        will-change: transform;
+      }
+      @keyframes ostoCtaTickPulse {
+        0%   { transform: translateX(-32px); opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: 1; }
+        100% { transform: translateX(calc(100% + 32px)); opacity: 0; }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .osto-cta-rail-flow,
-        .osto-cta-tick-flow {
+        .osto-cta-tick-flow,
+        .osto-cta-rail-flow::before,
+        .osto-cta-tick-flow::before {
           animation: none !important;
+        }
+        .osto-cta-rail-flow::before,
+        .osto-cta-tick-flow::before {
+          opacity: 0 !important;
         }
       }
 
