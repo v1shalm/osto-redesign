@@ -4104,11 +4104,15 @@ function FinalCtaRailField() {
         maskImage: centerFade,
       }}
     >
-      {/* Vertical dashed rails tiled every TILE px across the band. */}
+      {/* Vertical dashed rails tiled every TILE px across the band.
+          The dashed pattern itself scrolls top-to-bottom via a CSS
+          animation on background-position, so each rail reads as
+          "data flowing through" — the rail stays put, the dashes
+          travel. Subtle but live. */}
       {rails.map((i) => (
         <span
           key={i}
-          className="absolute top-0 bottom-0"
+          className="osto-cta-rail-flow absolute top-0 bottom-0"
           style={{
             left: `${i * TILE}px`,
             width: 1,
@@ -4118,11 +4122,12 @@ function FinalCtaRailField() {
         />
       ))}
 
-      {/* Horizontal tick rows at four heights — span the full band. */}
+      {/* Horizontal tick rows at four heights — span the full band.
+          Same flowing-dash animation, scrolling left-to-right. */}
       {tickRows.map((topPct) => (
         <span
           key={topPct}
-          className="absolute left-0 right-0"
+          className="osto-cta-tick-flow absolute left-0 right-0"
           style={{
             top: `${topPct}%`,
             height: 1,
@@ -4714,6 +4719,33 @@ function V2Styles() {
       @media (prefers-reduced-motion: reduce) {
         .resonate-bar,
         .resonate-live-dot {
+          animation: none !important;
+        }
+      }
+
+      /* ─── FinalCTA grid line flow ────────────────────────────────────
+         The rails and ticks stay anchored; their dashed PATTERNS flow.
+         Animating background-position by exactly one full dash cycle
+         (10px = 4px dash + 6px gap) loops seamlessly. Vertical rails
+         flow top-to-bottom; horizontal ticks flow left-to-right at a
+         slightly different cadence so the grid never feels metronomic. */
+      @keyframes ostoCtaRailFlow {
+        from { background-position: 0 0; }
+        to   { background-position: 0 10px; }
+      }
+      .osto-cta-rail-flow {
+        animation: ostoCtaRailFlow 600ms linear infinite;
+      }
+      @keyframes ostoCtaTickFlow {
+        from { background-position: 0 0; }
+        to   { background-position: 10px 0; }
+      }
+      .osto-cta-tick-flow {
+        animation: ostoCtaTickFlow 800ms linear infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .osto-cta-rail-flow,
+        .osto-cta-tick-flow {
           animation: none !important;
         }
       }
