@@ -3978,36 +3978,90 @@ function FinalCTA() {
   );
 }
 
+// ─── Dot-matrix shared helpers ────────────────────────────────────────
+// The two matrix fields (BrandPanelRailPattern, FinalCtaRailField)
+// share their dot-generation logic. We previously animated each dot's
+// opacity individually, which paints thousands of nodes every frame
+// and lags on lower-end devices. The new shimmer animates a single
+// wrapper per layer (composited on the GPU) and gets per-dot variety
+// for free by splitting the dot population into two interleaved sets
+// that crossfade against each other.
+
+// Deterministic pseudo-random in [0,1) seeded by (i,j). No Math.random
+// so SSR and client markup match on hydration.
+function ostoMatrixRand(i: number, j: number) {
+  const s = Math.sin((i + 1) * 12.9898 + (j + 1) * 78.233) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+type OstoMatrixDot = { x: number; y: number; o: number };
+
+// Build two interleaved subsets ("A" + "B") of dots over a COLS×ROWS
+// grid with step STEP. ~45% of cells fire (down from 62%): the mask
+// fades half the field anyway, so trimming density saves paint cost
+// without changing the look. Each fired cell falls into set A or B
+// based on another rand call — set membership is fixed, so the two
+// SVGs render once and never re-render.
+function ostoBuildMatrix(COLS: number, ROWS: number, STEP: number) {
+  const setA: OstoMatrixDot[] = [];
+  const setB: OstoMatrixDot[] = [];
+  for (let j = 0; j < ROWS; j++) {
+    for (let i = 0; i < COLS; i++) {
+      if (ostoMatrixRand(i, j) > 0.55) {
+        const o = 0.45 + ostoMatrixRand(i + 100, j + 100) * 0.45;
+        const dot: OstoMatrixDot = { x: i * STEP, y: j * STEP, o };
+        if (ostoMatrixRand(i + 200, j + 200) > 0.5) setA.push(dot);
+        else setB.push(dot);
+      }
+    }
+  }
+  return { setA, setB };
+}
+
+function OstoMatrixSvg({
+  dots,
+  cols,
+  rows,
+  step,
+}: {
+  dots: OstoMatrixDot[];
+  cols: number;
+  rows: number;
+  step: number;
+}) {
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${cols * step} ${rows * step}`}
+      preserveAspectRatio="xMidYMid slice"
+      style={{ display: "block" }}
+    >
+      {dots.map((d, idx) => (
+        <circle
+          key={idx}
+          cx={d.x}
+          cy={d.y}
+          r={1.4}
+          fill="#ffffff"
+          opacity={d.o}
+        />
+      ))}
+    </svg>
+  );
+}
+
 // ─── BrandPanelRailPattern ────────────────────────────────────────────
-// Dashed-rail field that covers the entire "With Resonate" brand panel
-// in the ProblemSection. Same vocabulary as FinalCtaRailPattern (4px
-// dashes on 6px gaps, white-on-blue), weighted toward the right side
-// of the card: faint marks on the left ramping up to strong, drafting-
-// margin rails near the right edge. The text content on the left
-// stays the focal element.
+// Dot-matrix field that covers the entire "With Resonate" brand panel
+// in the ProblemSection. Two interleaved SVG layers crossfade so the
+// field shimmers without paint-animating thousands of nodes. A
+// horizontal fade-mask keeps the marks faint on the left (behind the
+// label / title / metric copy) and strong on the right edge.
 function BrandPanelRailPattern() {
-  // Vertical rails distributed across the panel; opacities ramp from
-  // very faint on the left up to strong on the right edge so the
-  // field reads as a directional gradient, not symmetric striping.
-  const verticals = [
-    { leftPct: 12, o: 0.05 },
-    { leftPct: 28, o: 0.08 },
-    { leftPct: 46, o: 0.12 },
-    { leftPct: 62, o: 0.20 },
-    { leftPct: 76, o: 0.28 },
-    { leftPct: 88, o: 0.36 },
-    { leftPct: 96, o: 0.44 },
-  ];
-  // Horizontal tick marks clustered toward the right half so they
-  // reinforce the weighted-right read. Widths vary so the gutter has
-  // visible corners.
-  const horizontals = [
-    { topPct: 18, leftPct: 64, widthPct: 32 },
-    { topPct: 38, leftPct: 56, widthPct: 40 },
-    { topPct: 62, leftPct: 70, widthPct: 26 },
-    { topPct: 82, leftPct: 58, widthPct: 38 },
-    { topPct: 92, leftPct: 76, widthPct: 20 },
-  ];
+  const STEP = 12;
+  const COLS = 60;
+  const ROWS = 36;
+  const { setA, setB } = ostoBuildMatrix(COLS, ROWS, STEP);
 
   // Horizontal fade-mask — pattern is barely there on the left (where
   // the label / title / metric text lives), ramps through the middle,
@@ -4015,90 +4069,45 @@ function BrandPanelRailPattern() {
   const fade =
     "linear-gradient(to right, transparent 0%, transparent 32%, rgba(0,0,0,0.55) 56%, #000 80%, #000 100%)";
 
-  const vDash = (o: number) =>
-    `repeating-linear-gradient(to bottom, rgba(255,255,255,${o}) 0 4px, transparent 4px 10px)`;
-  const hDash = (o: number) =>
-    `repeating-linear-gradient(to right, rgba(255,255,255,${o}) 0 4px, transparent 4px 10px)`;
-
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-0"
+      className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       style={{
         WebkitMaskImage: fade,
         maskImage: fade,
       }}
     >
-      {verticals.map((v) => (
-        <span
-          key={v.leftPct}
-          className="absolute top-0 bottom-0"
-          style={{
-            left: `${v.leftPct}%`,
-            width: 1,
-            backgroundImage: vDash(v.o),
-            backgroundRepeat: "repeat-y",
-          }}
-        />
-      ))}
-      {horizontals.map((h) => (
-        <span
-          key={`${h.topPct}-${h.leftPct}`}
-          className="absolute"
-          style={{
-            top: `${h.topPct}%`,
-            left: `${h.leftPct}%`,
-            width: `${h.widthPct}%`,
-            height: 1,
-            backgroundImage: hDash(0.22),
-          }}
-        />
-      ))}
+      <div className="osto-matrix-layer osto-matrix-layer-a absolute inset-0">
+        <OstoMatrixSvg dots={setA} cols={COLS} rows={ROWS} step={STEP} />
+      </div>
+      <div className="osto-matrix-layer osto-matrix-layer-b absolute inset-0">
+        <OstoMatrixSvg dots={setB} cols={COLS} rows={ROWS} step={STEP} />
+      </div>
     </div>
   );
 }
 
 // ─── FinalCtaRailField ────────────────────────────────────────────────
-// Decorative dashed-rail field that fills the entire FinalCTA band.
-// A column of vertical dashed lines is tiled every 32px across the
-// full width; a radial fade-mask in the center weakens the pattern
-// behind the headline + CTAs so the content sits in a calm spotlight
-// while the rails read stronger toward the edges. Horizontal tick
-// rows at four heights punctuate the field with drafting-sheet
-// ruling. A pair of scanner ticks slides down the outermost left and
-// right rails on a slow loop.
+// Decorative dot-matrix that fills the entire FinalCTA band. Same
+// two-layer crossfade technique as BrandPanelRailPattern. A radial
+// fade-mask hollows out the center so the headline + CTAs sit in a
+// calm spotlight while the dots read stronger toward the edges.
 function FinalCtaRailField() {
-  // Column spacing in px. 32 reads as a clear drafting rhythm at
-  // 1280px+ viewports without becoming visual noise.
-  const TILE = 32;
-  // Number of rails depends on viewport; we render up to 60 columns
-  // (≈1920px) and let `overflow: hidden` on the parent crop them.
-  // Generating the list at render time keeps the JSX simple and the
-  // pattern uniform without needing dynamic measurement.
-  const rails = Array.from({ length: 60 }, (_, i) => i);
+  const STEP = 12;
+  // 80 cols × 12px = 960px viewBox width — wider than any realistic
+  // FinalCTA band on a 1240px-rail layout. preserveAspectRatio: slice
+  // crops cleanly if the band is narrower.
+  const COLS = 80;
+  const ROWS = 36;
+  const { setA, setB } = ostoBuildMatrix(COLS, ROWS, STEP);
 
-  // Horizontal tick rows — short dashed segments at four heights
-  // that punctuate the vertical field. Same dashed vocabulary as
-  // the verticals (4px dash on 6px gap), at a lower opacity so the
-  // rails stay the dominant rhythm.
-  const tickRows = [10, 32, 68, 90];
-
-  // Radial fade-mask (alpha mode — the CSS default). In alpha-mode,
-  // the mask's ALPHA channel controls visibility: alpha 1 shows the
-  // pattern, alpha 0 hides it. So we ramp from transparent (hide) at
-  // the center to fully opaque black (show) at the band edges. The
-  // previous version's ellipse was too small (55% × 70%) and stops
-  // were bunched, so the fully-opaque ring was a thin strip near the
-  // outer wall — easily missed. Expanding to 75% × 85% with a wider
-  // ramp leaves a clear, visible rail band around the perimeter.
+  // Radial fade-mask: transparent (hide) in the center, ramping out
+  // to fully opaque black (show) toward the band edges. Same alpha-
+  // mode geometry as the previous rail field — the headline + CTAs
+  // sit in the cleared zone, dots gather around the perimeter.
   const centerFade =
     "radial-gradient(ellipse 75% 85% at 50% 50%, transparent 0%, transparent 25%, rgba(0,0,0,0.5) 55%, #000 85%)";
-
-  // Single dashed column — reused per rail. 4px dash on 6px gap.
-  // Bumped white opacity 0.18 -> 0.30 so the rails read confidently
-  // through the partial mask in the ramp zone.
-  const railBg =
-    "repeating-linear-gradient(to bottom, rgba(255,255,255,0.30) 0 4px, transparent 4px 10px)";
 
   return (
     <div
@@ -4109,67 +4118,12 @@ function FinalCtaRailField() {
         maskImage: centerFade,
       }}
     >
-      {/* Vertical dashed rails tiled every TILE px across the band.
-          The dashed pattern itself scrolls top-to-bottom via a CSS
-          animation on background-position, so each rail reads as
-          "data flowing through" — the rail stays put, the dashes
-          travel. Subtle but live. */}
-      {rails.map((i) => (
-        <span
-          key={i}
-          className="osto-cta-rail-flow absolute top-0 bottom-0"
-          style={{
-            left: `${i * TILE}px`,
-            width: 1,
-            backgroundImage: railBg,
-            backgroundRepeat: "repeat-y",
-            // Stagger the bright pulse per rail. 240ms × index gives
-            // adjacent rails clearly different pulse phases without the
-            // pattern becoming visually chaotic.
-            ["--osto-pulse-delay" as string]: `${(i * 240) % 3200}ms`,
-          }}
-        />
-      ))}
-
-      {/* Horizontal tick rows at four heights — span the full band.
-          Same flowing-dash animation, scrolling left-to-right. */}
-      {tickRows.map((topPct, i) => (
-        <span
-          key={topPct}
-          className="osto-cta-tick-flow absolute left-0 right-0"
-          style={{
-            top: `${topPct}%`,
-            height: 1,
-            backgroundImage:
-              "repeating-linear-gradient(to right, rgba(255,255,255,0.16) 0 4px, transparent 4px 10px)",
-            // Stagger horizontal pulses so the four rows don't fire in
-            // unison. 900ms between each gives a comfortable cascade.
-            ["--osto-pulse-delay" as string]: `${i * 900}ms`,
-          }}
-        />
-      ))}
-
-      {/* Scanner ticks on the outermost left + right rails. */}
-      <span
-        className="osto-cta-rail-tick absolute"
-        style={{
-          left: 0,
-          width: 1,
-          height: 24,
-          background:
-            "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%)",
-        }}
-      />
-      <span
-        className="osto-cta-rail-tick absolute"
-        style={{
-          right: 0,
-          width: 1,
-          height: 24,
-          background:
-            "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%)",
-        }}
-      />
+      <div className="osto-matrix-layer osto-matrix-layer-a absolute inset-0">
+        <OstoMatrixSvg dots={setA} cols={COLS} rows={ROWS} step={STEP} />
+      </div>
+      <div className="osto-matrix-layer osto-matrix-layer-b absolute inset-0">
+        <OstoMatrixSvg dots={setB} cols={COLS} rows={ROWS} step={STEP} />
+      </div>
     </div>
   );
 }
@@ -4728,119 +4682,54 @@ function V2Styles() {
         animation: resonateLiveDotPulse 1.8s ease-in-out infinite;
       }
 
+      /* Dot-matrix shimmer — shared by BrandPanelRailPattern and
+         FinalCtaRailField. The matrix is rendered as two interleaved
+         SVG layers ("A" and "B"); each wrapper <div> animates its
+         own opacity between a low and a high, with B's phase shifted
+         half a cycle from A's. The result reads as a continuous
+         shimmer because at any given moment one half-set is rising
+         while the other falls, and dots from the two sets share
+         neither cell positions nor brightness peaks.
+
+         Critical perf detail: we animate exactly TWO elements per
+         matrix (the two wrapper divs), not thousands of SVG circles.
+         Opacity-only animation on a compositor-promoted layer is
+         GPU-accelerated; opacity on a node containing thousands of
+         non-promoted children triggers a paint pass each frame and
+         tanks framerate. The will-change + isolation hints below
+         promote each layer to its own compositor surface. */
+      @keyframes ostoMatrixFadeA {
+        0%   { opacity: 0.35; }
+        50%  { opacity: 1; }
+        100% { opacity: 0.35; }
+      }
+      @keyframes ostoMatrixFadeB {
+        0%   { opacity: 1; }
+        50%  { opacity: 0.35; }
+        100% { opacity: 1; }
+      }
+      .osto-matrix-layer {
+        will-change: opacity;
+        transform: translateZ(0);
+        isolation: isolate;
+      }
+      .osto-matrix-layer-a {
+        animation: ostoMatrixFadeA 6400ms ease-in-out infinite;
+      }
+      .osto-matrix-layer-b {
+        animation: ostoMatrixFadeB 6400ms ease-in-out infinite;
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .resonate-bar,
-        .resonate-live-dot {
+        .resonate-live-dot,
+        .osto-matrix-layer-a,
+        .osto-matrix-layer-b {
           animation: none !important;
         }
-      }
-
-      /* ─── FinalCTA grid line flow ────────────────────────────────────
-         Two simultaneous motions on the grid:
-         (1) the dashed pattern of each rail / tick scrolls along its
-             axis via background-position — quiet ambient flow;
-         (2) a bright "pulse" segment travels along each rail / tick
-             via a ::before pseudo-element, brighter and clearly
-             visible. The pulse is what reads as "data running through
-             the line"; the pattern flow under it is the supporting
-             texture. */
-      @keyframes ostoCtaRailFlow {
-        from { background-position: 0 0; }
-        to   { background-position: 0 10px; }
-      }
-      .osto-cta-rail-flow {
-        animation: ostoCtaRailFlow 600ms linear infinite;
-        position: relative;
-      }
-      .osto-cta-rail-flow::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 28px;
-        background: linear-gradient(
-          to bottom,
-          transparent 0%,
-          rgba(255,255,255,0.9) 50%,
-          transparent 100%
-        );
-        animation: ostoCtaRailPulse 3200ms linear infinite;
-        animation-delay: var(--osto-pulse-delay, 0ms);
-        will-change: transform;
-      }
-      @keyframes ostoCtaRailPulse {
-        0%   { transform: translateY(-32px); opacity: 0; }
-        10%  { opacity: 1; }
-        90%  { opacity: 1; }
-        100% { transform: translateY(calc(100% + 32px)); opacity: 0; }
-      }
-
-      @keyframes ostoCtaTickFlow {
-        from { background-position: 0 0; }
-        to   { background-position: 10px 0; }
-      }
-      .osto-cta-tick-flow {
-        animation: ostoCtaTickFlow 800ms linear infinite;
-        position: relative;
-      }
-      .osto-cta-tick-flow::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 28px;
-        background: linear-gradient(
-          to right,
-          transparent 0%,
-          rgba(255,255,255,0.9) 50%,
-          transparent 100%
-        );
-        animation: ostoCtaTickPulse 4200ms linear infinite;
-        animation-delay: var(--osto-pulse-delay, 0ms);
-        will-change: transform;
-      }
-      @keyframes ostoCtaTickPulse {
-        0%   { transform: translateX(-32px); opacity: 0; }
-        10%  { opacity: 1; }
-        90%  { opacity: 1; }
-        100% { transform: translateX(calc(100% + 32px)); opacity: 0; }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .osto-cta-rail-flow,
-        .osto-cta-tick-flow,
-        .osto-cta-rail-flow::before,
-        .osto-cta-tick-flow::before {
-          animation: none !important;
-        }
-        .osto-cta-rail-flow::before,
-        .osto-cta-tick-flow::before {
-          opacity: 0 !important;
-        }
-      }
-
-      /* ─── FinalCTA rail-tick scanner ─────────────────────────────────
-         A short bright vertical segment slides down the outermost rail
-         of the FinalCtaRailPattern. The element is positioned at top
-         and the keyframe translates it the full container height,
-         falling out the bottom before resetting. ease-in-out gives the
-         scan a hand-cranked feel rather than a robotic constant speed. */
-      @keyframes ostoCtaRailTick {
-        0%   { transform: translateY(-24px); opacity: 0; }
-        8%   { opacity: 1; }
-        92%  { opacity: 1; }
-        100% { transform: translateY(420px); opacity: 0; }
-      }
-      .osto-cta-rail-tick {
-        top: 0;
-        animation: ostoCtaRailTick 5200ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .osto-cta-rail-tick {
-          animation: none !important;
-          opacity: 0 !important;
+        .osto-matrix-layer-a,
+        .osto-matrix-layer-b {
+          opacity: 0.7 !important;
         }
       }
 
