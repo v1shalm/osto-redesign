@@ -291,7 +291,15 @@ export function OstoHeroV2() {
       <Hero />
       <LogoStrip />
       <SectionSpacer />
+      <Reveal><ThreeDoors /></Reveal>
+      <SectionSpacer />
+      <Reveal><CustomerStories /></Reveal>
+      <SectionSpacer />
+      <Reveal><OutcomeStrip /></Reveal>
+      <SectionSpacer />
       <Reveal><ProblemSection /></Reveal>
+      <SectionSpacer />
+      <Reveal><StitchedVsResonate /></Reveal>
       <SectionSpacer />
       {/* HowItWorks is NOT wrapped in <Reveal> — the Reveal component
           applies a CSS transform which creates a containing block that
@@ -299,15 +307,17 @@ export function OstoHeroV2() {
           own scroll-driven fade-in on the inner panel. */}
       <HowItWorks />
       <SectionSpacer />
+      <Reveal><CodeSnippet /></Reveal>
+      <SectionSpacer />
       <Reveal><OstoModules /></Reveal>
       <SectionSpacer />
-      <Reveal><CustomerStories /></Reveal>
+      <Reveal><Integrations /></Reveal>
+      <SectionSpacer />
+      <Reveal><WhyTrust /></Reveal>
       <SectionSpacer />
       <Reveal><PricingCalculator /></Reveal>
       <SectionSpacer />
       <Reveal><Pricing /></Reveal>
-      <SectionSpacer />
-      <Reveal><WhyTrust /></Reveal>
       <SectionSpacer />
       <Reveal><FAQ /></Reveal>
       <SectionSpacer />
@@ -1910,10 +1920,11 @@ const HIW_STEPS = [
   },
 ] as const;
 
-// The scroll-driven multiplier. 2.4 = the wrapper is 2.4× viewport tall,
-// so the user spends ~one viewport per step plus a short tail before
-// the section releases.
-const HIW_SCROLL_VH = 240;
+// The scroll-driven multiplier. 1.8 = the wrapper is 1.8× viewport tall,
+// so the user spends about a third of a viewport per step before the
+// section releases. The old 240 budget left the panel pinned with
+// visible empty space above and below it for too long.
+const HIW_SCROLL_VH = 180;
 
 function HowItWorks() {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -2025,7 +2036,7 @@ function HowItWorksPanel({
         // on phone (rails are hidden < md) and the rail-inset on md+.
       }}
     >
-      <div className="relative grid gap-y-10 px-6 py-10 md:grid-cols-[1fr_1.05fr] md:items-center md:gap-x-12 md:px-12 md:py-16">
+      <div className="relative grid gap-y-10 px-6 py-10 md:grid-cols-[1fr_1.05fr] md:items-center md:gap-x-12 md:px-12 md:py-10">
         {/* ── Left: heading + step list (active step highlights) ── */}
         <div className="relative z-10">
           <h2
@@ -2667,7 +2678,7 @@ const STORIES: StoryCard[] = [
       </span>
     ),
     quote:
-      "We swapped a 40-seat Tier-1 queue for Resonate agents on the first day of the pilot. The 90 ms latency was the unlock — callers stopped detecting the gap, and we now route 71% of tickets to the agent before a human even sees them.",
+      "We swapped a 40-seat Tier-1 queue for Resonate agents on the first day of the pilot. The 90 ms latency did it. Callers stopped detecting the gap, and we now route 71% of tickets to the agent before a human even sees them.",
     name: "Maya Okafor",
     role: "VP Support",
     avatar: "/christina-wocintechchat-com-m-AHfRjkk8QcE-unsplash.jpg",
@@ -2731,7 +2742,7 @@ const STORIES: StoryCard[] = [
   {
     kind: "quote",
     quote:
-      "Transcripts, sentiment, and drop-off heatmaps in the same dashboard meant we could actually tune what the agent said next. By month two it was outperforming our top-quartile reps.",
+      "Transcripts, sentiment, and drop-off heatmaps in the same dashboard meant we could finally tune what the agent said next. By month two it was outperforming our top-quartile reps.",
     name: "Sasha Levine",
     role: "Head of CX, Faire",
     avatar: "/zach-wear-5fkOfxsTd58-unsplash.jpg",
@@ -3698,77 +3709,146 @@ function PriceAmount({
   );
 }
 
-// ─── Why trust Resonate — 3 credibility pillars ───────────────────────────
+// ─── Why trust Resonate — asymmetric stat trio ────────────────────────
+// One hero stat (latency) gets the dominant card; the other two
+// (languages, throughput) stack as smaller supporting cards. The
+// reframe is honest: latency is the killer number every voice-AI
+// buyer compares on, so it should visually outweigh the other two.
+// The two smaller cards drop the long body copy in favour of tight
+// captions, keeping vertical alignment clean.
 function WhyTrust() {
   return (
     <section className="px-5 pt-4 sm:px-6">
       <div className="mx-auto max-w-[1180px]">
         <SectionHeading>
           Built by speech{" "}
-          <span style={{ color: T.accent }}>researchers</span>, not prompt engineers.
+          <span style={{ color: T.accent }}>researchers</span>, not prompt
+          engineers.
         </SectionHeading>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          <TrustPillar
-            big="90 ms"
-            heading="Time to first byte"
-            body="Our TTS, STT, and turn-taking run on the same GPU stack, so your caller hears the first syllable before a stitched vendor pipeline finishes routing."
-          />
-          <TrustPillar
-            big="32"
-            heading="Languages with native accents"
-            body="Agents speak Hindi, Spanish, Arabic, and Mandarin the way locals do, and they code-switch inside a single call without dropping context."
-          />
-          <TrustPillar
-            big="2M+"
-            heading="Conversations a day"
-            body="Production load across support, sales, and healthcare under a 99.99% uptime SLA. Our team answers the phone when you call too."
-          />
+        {/* Asymmetric 2-column layout on md+: hero card takes 1.6fr,
+            supporting stack takes 1fr. Single column on phone with
+            the hero on top and the two supporting cards stacked
+            below it. */}
+        <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-[1.6fr_1fr]">
+          {/* ── Hero stat: latency ─────────────────────────────── */}
+          <article
+            className="flex flex-col justify-between p-8 md:p-10"
+            style={{ background: T.surface, boxShadow: E.card }}
+          >
+            <div>
+              {/* Hero number — 64-72px display so it actually reads as
+                  the headline of the section, not just one of three. */}
+              <p
+                className="text-[64px] font-medium leading-[64px] md:text-[72px] md:leading-[72px]"
+                style={{
+                  fontFamily: T.fontDisplay,
+                  color: T.accent,
+                  letterSpacing: "-2px",
+                }}
+              >
+                90 ms
+              </p>
+              <h3
+                className="mt-5 text-balance text-[20px] font-medium leading-[28px]"
+                style={{
+                  color: T.ink,
+                  fontFamily: T.fontDisplay,
+                  letterSpacing: "-0.3px",
+                }}
+              >
+                Time to first byte
+              </h3>
+              <p
+                className="mt-3 max-w-[44ch] text-pretty text-[15px] leading-[24px]"
+                style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
+              >
+                Our TTS, STT, and turn-taking run on the same GPU stack,
+                so your caller hears the first syllable before a stitched
+                vendor pipeline finishes routing.
+              </p>
+            </div>
+            {/* p95 footnote — sits at the bottom of the hero card,
+                signalling engineering rigor (every credible competitor
+                publishes a median; disclosing the tail is the move).
+                TODO: replace 180 ms with the real p95 from the last
+                30 days of production traffic. Number should match
+                the public status page. */}
+            <p
+              className="mt-8 text-[12.5px] leading-[18px]"
+              style={{
+                fontFamily: T.fontMono,
+                color: T.inkSubtle,
+                letterSpacing: "-0.05px",
+              }}
+            >
+              p50 90 ms · p95 180 ms · measured across 30 days of US
+              production traffic
+            </p>
+          </article>
+
+          {/* ── Supporting stack: two smaller stats ─────────────── */}
+          <div className="grid grid-cols-1 gap-6">
+            <TrustPillarSmall
+              big="32"
+              heading="Languages, accent-native"
+              caption="Hindi, Spanish, Arabic, and Mandarin spoken the way locals do, with code-switching mid-call."
+            />
+            <TrustPillarSmall
+              big="2M+"
+              heading="Conversations a day"
+              caption="Production load under a 99.99% uptime SLA. We answer the phone when you call too."
+            />
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function TrustPillar({
+// Smaller stat card used as a supporting pillar next to the hero
+// latency card. Body copy is shorter (1 sentence vs. the hero's
+// paragraph) and the big number is smaller — the visual hierarchy
+// puts latency first, these second.
+function TrustPillarSmall({
   big,
   heading,
-  body,
+  caption,
 }: {
   big: string;
   heading: string;
-  body: string;
+  caption: string;
 }) {
   return (
     <article
-      className="p-7"
+      className="flex flex-col p-7 md:p-8"
       style={{ background: T.surface, boxShadow: E.card }}
     >
       <p
-        className="text-[32px] font-medium leading-[38px]"
+        className="text-[40px] font-medium leading-[44px]"
         style={{
           fontFamily: T.fontDisplay,
           color: T.accent,
-          letterSpacing: "-0.8px",
+          letterSpacing: "-1.2px",
         }}
       >
         {big}
       </p>
       <h3
-        className="mt-4 text-balance text-[16px] font-medium leading-[24px]"
+        className="mt-3 text-balance text-[16px] font-medium leading-[22px]"
         style={{
           color: T.ink,
           fontFamily: T.fontDisplay,
-          letterSpacing: "-0.24px",
+          letterSpacing: "-0.2px",
         }}
       >
         {heading}
       </h3>
       <p
-        className="mt-2 max-w-[36ch] text-pretty text-[16px] leading-[24px]"
-        style={{ color: T.inkSoft, letterSpacing: "-0.24px" }}
+        className="mt-2 text-pretty text-[14px] leading-[22px]"
+        style={{ color: T.inkSoft, letterSpacing: "-0.1px" }}
       >
-        {body}
+        {caption}
       </p>
     </article>
   );
@@ -3790,7 +3870,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How is Resonate different from ElevenLabs, Cartesia, or Vapi?",
-    a: "ElevenLabs and Cartesia are great speech models — you still glue on STT, LLM, telephony, and evals. Vapi orchestrates third-party models with the latency penalty that brings. Resonate owns the full stack end-to-end, which is how we hold 90 ms TTFB under real production load.",
+    a: "ElevenLabs and Cartesia are great speech models. You still glue on STT, LLM, telephony, and evals. Vapi orchestrates third-party models with the latency penalty that brings. Resonate owns the full stack end-to-end, which is how we hold 90 ms TTFB under real production load.",
   },
   {
     q: "What about HIPAA, SOC 2, and PII?",
@@ -4337,6 +4417,2136 @@ function CertChip({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── ThreeDoors ───────────────────────────────────────────────────────
+// Buyer-self-identification band. Three cards routing the three
+// audiences this page is trying to capture: developers, CX/ops teams,
+// and enterprise. Each card carries a small persona label, one
+// headline, one real visual, and one CTA, no paragraph. The visual
+// IS the explanation: the dev card shows an editor pane (prefiguring
+// the CodeSnippet section below), the CX card shows a flow-builder
+// canvas, and the enterprise card shows a stylised master-agreement
+// contract with the four compliance line items. The job of this
+// section is fast self-identification and routing, not narrative,
+// so it stays light.
+function ThreeDoors() {
+  return (
+    <section className="px-5 sm:px-6">
+      <div className="mx-auto max-w-[1180px]">
+        <div
+          className="grid grid-cols-1 gap-px md:grid-cols-3"
+          style={{ background: T.ring }}
+        >
+          <DoorCard
+            label="For developers"
+            headline={
+              <>
+                Ship a voice agent
+                <br />
+                from your editor.
+              </>
+            }
+            cta="Read the docs"
+            visual={<DoorVisualCode />}
+          />
+          <DoorCard
+            label="For CX and ops teams"
+            headline={
+              <>
+                Design flows
+                <br />
+                without writing code.
+              </>
+            }
+            cta="See a live demo"
+            visual={<DoorVisualFlow />}
+          />
+          <DoorCard
+            label="For enterprise"
+            headline={
+              <>
+                Sign a contract
+                <br />
+                with one vendor.
+              </>
+            }
+            cta="Contact sales"
+            visual={<DoorVisualCompliance />}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Shared card shell so the three doors share padding, height balance,
+// label + headline typography, and CTA placement. Each visual is
+// constrained to a fixed-height region so the trio's CTAs always
+// line up across the row.
+function DoorCard({
+  label,
+  headline,
+  cta,
+  visual,
+}: {
+  label: string;
+  // ReactNode so a card can force an explicit line break inside its
+  // headline (e.g. "Sign a contract / with one vendor.") to keep the
+  // three headlines visually balanced at two lines each.
+  headline: React.ReactNode;
+  cta: string;
+  visual: React.ReactNode;
+}) {
+  return (
+    <article
+      className="flex flex-col p-7 md:p-8"
+      style={{ background: T.surface }}
+    >
+      <h3
+        className="text-[14px] font-medium leading-[22px]"
+        style={{ color: T.inkMid, letterSpacing: "-0.1px" }}
+      >
+        {label}
+      </h3>
+      <p
+        className="mt-3 text-balance text-[22px] font-medium leading-[30px]"
+        style={{
+          fontFamily: T.fontDisplay,
+          color: T.ink,
+          letterSpacing: "-0.4px",
+        }}
+      >
+        {headline}
+      </p>
+
+      {/* Visual region — fixed height (not just min-h) so all three
+          doors render their visuals into the exact same vertical box.
+          Each visual is responsible for filling this region: the
+          editor pane stretches vertically, the flow canvas already
+          fills, and the contract document fills edge-to-edge. */}
+      <div className="mt-6 h-[200px] md:h-[220px]">{visual}</div>
+
+      <Link
+        href="#"
+        className="mt-auto inline-flex items-center gap-x-1.5 pt-6 text-[14px] font-medium leading-[22px]"
+        style={{ color: T.accentText, letterSpacing: "-0.1px" }}
+      >
+        {cta}
+        <DoorArrow />
+      </Link>
+    </article>
+  );
+}
+
+// ─── Door visual shell ────────────────────────────────────────────────
+// All three door visuals share one structure: a document/artifact
+// tile sitting on the panel-coloured outer region with a top tab
+// strip (accent dot + filename in mono), a hairline-divided body
+// area, and a flex-column layout so content fills the height
+// cleanly. The enterprise contract was the design baseline; the
+// other two are rebuilt to match its vocabulary so the trio reads
+// as one family.
+function DoorArtifact({
+  filename,
+  children,
+}: {
+  filename: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="h-full"
+      style={{
+        background: T.panel,
+        boxShadow: `inset 0 0 0 1px ${T.ring}`,
+        padding: 12,
+      }}
+    >
+      <div
+        className="flex h-full flex-col"
+        style={{
+          background: T.surface,
+          boxShadow: E.card,
+        }}
+      >
+        {/* Top tab strip — accent corner mark + filename in mono.
+            Shared across all three artifacts. */}
+        <div
+          className="flex shrink-0 items-center gap-x-2 px-3 py-2"
+          style={{
+            borderBottom: `1px solid ${T.ring}`,
+            fontFamily: T.fontMono,
+            fontSize: 10.5,
+            color: T.inkMid,
+            letterSpacing: "-0.05px",
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 6,
+              height: 6,
+              background: T.accent,
+              display: "inline-block",
+            }}
+          />
+          {filename}
+        </div>
+        {/* Body — flex-1 so content fills the rest of the height. */}
+        <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// Developer visual — editor pane inside the shared artifact shell.
+// The `agent.ts` filename in the tab strip matches the larger
+// CodeSnippet section further down the page.
+function DoorVisualCode() {
+  return (
+    <DoorArtifact filename="agent.ts">
+      <pre
+        className="flex-1 overflow-hidden whitespace-pre px-4 py-3 text-[12.5px] leading-[20px]"
+        style={{
+          fontFamily: T.fontMono,
+          color: T.inkStrong,
+          letterSpacing: "-0.1px",
+        }}
+      >
+        <span style={{ color: T.accentText, fontWeight: 600 }}>import</span>
+        {` { Resonate } `}
+        <span style={{ color: T.accentText, fontWeight: 600 }}>from</span>
+        {` `}
+        <span style={{ color: T.inkStrong }}>{`"resonate"`}</span>
+        {`;\n\n`}
+        <span style={{ color: T.accentText, fontWeight: 600 }}>const</span>
+        {` agent = `}
+        <span style={{ color: T.accentText, fontWeight: 600 }}>new</span>
+        {` Resonate({\n  voice: `}
+        <span style={{ color: T.inkStrong }}>{`"ada"`}</span>
+        {`, `}
+        <span style={{ color: T.inkSubtle }}>{`// 32 languages`}</span>
+        {`\n});`}
+      </pre>
+    </DoorArtifact>
+  );
+}
+
+// CX/ops visual — flow-builder canvas inside the shared artifact
+// shell. Primary path is horizontal (Incoming → Verify intent →
+// Hand off); one branch breaks upward to a refund tool call with a
+// labelled "if refund" edge. Three node tiers: trigger pill
+// (smallest, accent fill), decision node (largest, selected with
+// accent ring), action boxes (medium). All coordinates on a 4px
+// grid for clean alignment.
+function DoorVisualFlow() {
+  // viewBox 360×200. Primary path runs along y=120.
+  const Y = 120;
+  const TRIG = { x: 24, y: Y - 14, w: 64, h: 28 };
+  const DEC = { x: 134, y: Y - 26, w: 92, h: 52 };
+  const HAND = { x: 264, y: Y - 16, w: 80, h: 32 };
+  const REF = { x: 254, y: 28, w: 80, h: 32 };
+  const LBL = { w: 44, h: 16 };
+
+  return (
+    <DoorArtifact filename="flows/refund.flow">
+      {/* Canvas body — dot-grid background so it reads as a workspace,
+          then the SVG flow diagram on top. The artifact shell handles
+          the surface, tab strip, and outer panel border. */}
+      <div
+        className="relative flex-1"
+        style={{
+          backgroundImage: `radial-gradient(circle, ${T.ring} 1px, transparent 1px)`,
+          backgroundSize: "12px 12px",
+          backgroundPosition: "6px 6px",
+        }}
+      >
+        <svg
+          viewBox="0 0 360 200"
+          width="100%"
+          height="100%"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden
+          style={{ position: "absolute", inset: 0 }}
+        >
+        {/* ── Edges (drawn before nodes so endpoints sit under) ──── */}
+        {/* Primary edge A: trigger → decision (clean horizontal) */}
+        <line
+          x1={TRIG.x + TRIG.w}
+          y1={Y}
+          x2={DEC.x}
+          y2={Y}
+          stroke={T.accent}
+          strokeWidth={1.4}
+        />
+        {/* Primary edge C: decision → hand off (clean horizontal) */}
+        <line
+          x1={DEC.x + DEC.w}
+          y1={Y}
+          x2={HAND.x}
+          y2={Y}
+          stroke={T.accent}
+          strokeWidth={1.4}
+        />
+        {/* Branch edge B: decision top → refund. Smooth cubic from
+            the top edge of the decision node up to the bottom edge
+            of the refund node, dashed to signal "conditional path". */}
+        {(() => {
+          const x1 = DEC.x + DEC.w / 2 + 16;
+          const y1 = DEC.y;
+          const x2 = REF.x + REF.w / 2;
+          const y2 = REF.y + REF.h;
+          return (
+            <path
+              d={`M${x1} ${y1} C ${x1} ${y1 - 30}, ${x2} ${y2 + 30}, ${x2} ${y2}`}
+              stroke={T.accent}
+              strokeWidth={1.4}
+              fill="none"
+              strokeDasharray="3 3"
+            />
+          );
+        })()}
+
+        {/* Edge label on branch B — "if refund" in mono inside a
+            surface tile. Centred on the branch midpoint horizontally,
+            offset right slightly so it doesn't collide with the
+            decision node's selected ring. */}
+        {(() => {
+          const cx = (DEC.x + DEC.w / 2 + 16 + REF.x + REF.w / 2) / 2 + 8;
+          const cy = (DEC.y + REF.y + REF.h) / 2;
+          return (
+            <g>
+              <rect
+                x={cx - LBL.w / 2}
+                y={cy - LBL.h / 2}
+                width={LBL.w}
+                height={LBL.h}
+                fill={T.surface}
+                stroke={T.ring}
+                strokeWidth={1}
+              />
+              <text
+                x={cx}
+                y={cy + 3.5}
+                fontFamily="var(--font-mono)"
+                fontSize="9"
+                fill={T.inkMid}
+                textAnchor="middle"
+                letterSpacing="-0.05px"
+              >
+                if refund
+              </text>
+            </g>
+          );
+        })()}
+
+        {/* ── Nodes ────────────────────────────────────────────────── */}
+        {/* Trigger pill (accent fill, white text) */}
+        <g>
+          <rect
+            x={TRIG.x}
+            y={TRIG.y}
+            width={TRIG.w}
+            height={TRIG.h}
+            fill={T.accent}
+          />
+          <text
+            x={TRIG.x + TRIG.w / 2}
+            y={TRIG.y + TRIG.h / 2 + 4}
+            fontFamily="var(--font-sans)"
+            fontSize="11"
+            fontWeight={500}
+            fill="#ffffff"
+            textAnchor="middle"
+            letterSpacing="-0.1px"
+          >
+            Incoming
+          </text>
+        </g>
+
+        {/* Decision node (selected, accent ring, step index + label) */}
+        <g>
+          <rect
+            x={DEC.x}
+            y={DEC.y}
+            width={DEC.w}
+            height={DEC.h}
+            fill={T.surface}
+            stroke={T.accent}
+            strokeWidth={2}
+          />
+          <text
+            x={DEC.x + 8}
+            y={DEC.y + 14}
+            fontFamily="var(--font-mono)"
+            fontSize="9"
+            fill={T.inkSubtle}
+            letterSpacing="-0.05px"
+          >
+            02
+          </text>
+          <text
+            x={DEC.x + DEC.w / 2}
+            y={DEC.y + DEC.h / 2 + 8}
+            fontFamily="var(--font-sans)"
+            fontSize="12"
+            fontWeight={500}
+            fill={T.ink}
+            textAnchor="middle"
+            letterSpacing="-0.1px"
+          >
+            Verify intent
+          </text>
+        </g>
+
+        {/* Hand off action box (right side of primary path) */}
+        <g>
+          <rect
+            x={HAND.x}
+            y={HAND.y}
+            width={HAND.w}
+            height={HAND.h}
+            fill={T.surface}
+            stroke={T.ring}
+            strokeWidth={1}
+          />
+          <text
+            x={HAND.x + HAND.w / 2}
+            y={HAND.y + HAND.h / 2 + 4}
+            fontFamily="var(--font-sans)"
+            fontSize="11"
+            fill={T.ink}
+            textAnchor="middle"
+            letterSpacing="-0.1px"
+          >
+            Hand off
+          </text>
+        </g>
+
+        {/* Refund branch box (above decision, with a leading dot to
+            mark it as a tool call, mirroring the dev card's syntax) */}
+        <g>
+          <rect
+            x={REF.x}
+            y={REF.y}
+            width={REF.w}
+            height={REF.h}
+            fill={T.surface}
+            stroke={T.ring}
+            strokeWidth={1}
+          />
+          <circle
+            cx={REF.x + 10}
+            cy={REF.y + REF.h / 2}
+            r={2.5}
+            fill={T.accent}
+          />
+          <text
+            x={REF.x + REF.w / 2 + 6}
+            y={REF.y + REF.h / 2 + 4}
+            fontFamily="var(--font-mono)"
+            fontSize="10.5"
+            fill={T.ink}
+            textAnchor="middle"
+            letterSpacing="-0.05px"
+          >
+            refund()
+          </text>
+        </g>
+      </svg>
+      </div>
+    </DoorArtifact>
+  );
+}
+
+// Enterprise visual — standalone contract artifact (no shared shell).
+// The card headline says "Sign a contract with one vendor", so the
+// visual is literally a stylised contract: a document tile with a
+// tab header, a stack of four compliance lines, a signature line
+// at the bottom, and a circular vendor seal in the corner. This is
+// the user-preferred baseline — kept standalone so its surface +
+// padding can stay exactly as approved.
+function DoorVisualCompliance() {
+  return (
+    <div
+      className="relative h-full p-4"
+      style={{
+        background: T.panel,
+        boxShadow: `inset 0 0 0 1px ${T.ring}`,
+      }}
+    >
+      <div
+        className="relative flex h-full flex-col"
+        style={{
+          background: T.surface,
+          boxShadow: E.card,
+        }}
+      >
+        {/* Top tab strip — accent corner mark + filename in mono. */}
+        <div
+          className="flex shrink-0 items-center gap-x-2 px-3 py-2"
+          style={{
+            borderBottom: `1px solid ${T.ring}`,
+            fontFamily: T.fontMono,
+            fontSize: 10.5,
+            color: T.inkMid,
+            letterSpacing: "-0.05px",
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 6,
+              height: 6,
+              background: T.accent,
+              display: "inline-block",
+            }}
+          />
+          master-agreement.pdf
+        </div>
+
+        {/* Compliance clause stack. */}
+        <div className="px-4 py-3">
+          {[
+            ["SOC 2 Type II", "covered"],
+            ["HIPAA BAA", "signed"],
+            ["GDPR + EU residency", "available"],
+            ["PCI redaction", "default"],
+          ].map(([k, v]) => (
+            <div
+              key={k}
+              className="flex items-baseline gap-x-2 py-[3px]"
+              style={{
+                fontFamily: T.fontMono,
+                fontSize: 10.5,
+                color: T.inkStrong,
+                letterSpacing: "-0.05px",
+              }}
+            >
+              <span style={{ color: T.ink }}>{k}</span>
+              <span
+                aria-hidden
+                className="flex-1 self-center"
+                style={{
+                  borderBottom: `1px dotted ${T.ring}`,
+                  marginTop: -3,
+                }}
+              />
+              <span style={{ color: T.accentText, fontWeight: 600 }}>{v}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Signature line — pinned to the bottom-left of the document
+            via mt-auto. The vendor seal sits absolutely positioned in
+            the bottom-right corner of the document (sibling to the
+            signature column) so the rotation can't push it into the
+            outer panel's clip region. */}
+        <div className="mt-auto px-4 pb-3 pt-3">
+          <div className="flex flex-col gap-y-1">
+            <span
+              style={{
+                width: 88,
+                height: 1,
+                background: T.ink,
+                display: "inline-block",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: T.fontMono,
+                fontSize: 9.5,
+                color: T.inkSubtle,
+                letterSpacing: "-0.05px",
+              }}
+            >
+              signed
+            </span>
+          </div>
+        </div>
+
+        {/* Vendor seal — absolutely positioned in the document's
+            bottom-right corner. Insets are sized so the rotated
+            bounding box (a 58×58 square rotated 6° needs ~63×63)
+            never touches the document edge: 8px inset on each side
+            gives the rotation comfortable clearance. */}
+        <div
+          className="pointer-events-none absolute"
+          style={{
+            right: 12,
+            bottom: 10,
+            width: 58,
+            height: 58,
+            transform: "rotate(-6deg)",
+          }}
+          aria-hidden
+        >
+          <svg width="58" height="58" viewBox="0 0 60 60" fill="none">
+            <defs>
+              <path
+                id="seal-arc-top"
+                d="M 8 30 A 22 22 0 0 1 52 30"
+                fill="none"
+              />
+              <path
+                id="seal-arc-bot"
+                d="M 11 32 A 19 19 0 0 0 49 32"
+                fill="none"
+              />
+            </defs>
+            <circle
+              cx="30"
+              cy="30"
+              r="26"
+              fill={T.surface}
+              stroke={T.accent}
+              strokeWidth={1.4}
+            />
+            <circle
+              cx="30"
+              cy="30"
+              r="22"
+              fill="none"
+              stroke={T.accent}
+              strokeWidth={0.8}
+            />
+            <text
+              fontFamily="var(--font-sans)"
+              fontSize="6.5"
+              fontWeight={600}
+              fill={T.accentText}
+              letterSpacing="0.06em"
+            >
+              <textPath
+                href="#seal-arc-top"
+                startOffset="50%"
+                textAnchor="middle"
+              >
+                Resonate · vendor
+              </textPath>
+            </text>
+            <text
+              fontFamily="var(--font-mono)"
+              fontSize="5.5"
+              fill={T.accentText}
+              letterSpacing="0.08em"
+            >
+              <textPath
+                href="#seal-arc-bot"
+                startOffset="50%"
+                textAnchor="middle"
+              >
+                signed · 2026
+              </textPath>
+            </text>
+            <rect x="24" y="25" width="12" height="12" fill={T.accent} />
+            <path
+              d="M26.5 31 l2.5 2.5 l4.5 -5"
+              stroke="#ffffff"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CodeSnippet ──────────────────────────────────────────────────────
+// Standalone code block that shows the SDK shape after the conceptual
+// "How it works" scrollytelling. The whole point of this section is
+// developer credibility in five seconds: import → construct → tool →
+// place a call, in ~15 lines, no scrolling required. Renders inside
+// the project's paper panel with a thin filename tab on top so it
+// reads like an editor pane, not a marketing widget.
+//
+// IMPORTANT: the SDK surface below is a representative draft. Swap
+// for the real `resonate` package shape when finalising. The shape
+// chosen here (constructor options → tools array → .call()) is what
+// developers expect after seeing Vapi, Retell, and LiveKit — it's the
+// shortest credible path from "I read a marketing page" to "I can see
+// myself shipping this on Monday".
+function CodeSnippet() {
+  // Each line is a tuple of (text, tone). Tone drives ink-weight:
+  // "kw"  = keywords and SDK identifiers (strongest ink)
+  // "str" = strings and numbers (mid ink)
+  // "tx"  = regular text (default ink)
+  // "cm"  = comments (faintest)
+  type Tone = "kw" | "str" | "tx" | "cm";
+  const line = (parts: Array<[string, Tone]>) => parts;
+
+  // The snippet itself. Indentation is preserved with literal spaces
+  // so the whole block stays inside one <pre> with no layout helpers.
+  const snippet: Array<Array<[string, Tone]>> = [
+    line([
+      ["import", "kw"],
+      [" { Resonate } ", "tx"],
+      ["from", "kw"],
+      [" ", "tx"],
+      [`"resonate"`, "str"],
+      [";", "tx"],
+    ]),
+    line([["", "tx"]]),
+    line([
+      ["const", "kw"],
+      [" agent = ", "tx"],
+      ["new", "kw"],
+      [" Resonate({", "tx"],
+    ]),
+    line([
+      ["  voice: ", "tx"],
+      [`"ada"`, "str"],
+      [",                 ", "tx"],
+      ["// 32 languages, accent-native", "cm"],
+    ]),
+    line([
+      ["  model: ", "tx"],
+      [`"gpt-4o"`, "str"],
+      [",             ", "tx"],
+      ["// or anthropic, gemini, your fine-tune", "cm"],
+    ]),
+    line([
+      ["  tools: [searchOrders, escalate],", "tx"],
+    ]),
+    line([["});", "tx"]]),
+    line([["", "tx"]]),
+    line([
+      ["await", "kw"],
+      [" agent.call({", "tx"],
+    ]),
+    line([
+      ["  to: ", "tx"],
+      [`"+14155550123"`, "str"],
+      [",", "tx"],
+    ]),
+    line([
+      ["  onTranscript: (t) => console.log(t.text),", "tx"],
+    ]),
+    line([["});", "tx"]]),
+  ];
+
+  const inkForTone = (t: Tone) => {
+    switch (t) {
+      case "kw":
+        return T.accentText;
+      case "str":
+        return T.inkStrong;
+      case "tx":
+        return T.ink;
+      case "cm":
+        return T.inkSubtle;
+    }
+  };
+
+  return (
+    <section className="px-5 pt-4 sm:px-6">
+      <div className="mx-auto max-w-[1180px]">
+        <SectionHeading>
+          Three minutes from{" "}
+          <span style={{ color: T.accent }}>npm install</span> to a live call.
+        </SectionHeading>
+        <p
+          className="mt-4 max-w-[620px] text-pretty text-[15px] leading-[24px] md:mx-auto md:text-center"
+          style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
+        >
+          One SDK. Bring your own LLM, voice, and tools. Streaming
+          telephony, transcripts, and evals are already&nbsp;wired.
+        </p>
+
+        {/* Editor pane. The filename tab sits flush above the body so
+            the whole thing reads as one continuous artifact. */}
+        <div className="mt-12 mx-auto max-w-[760px]">
+          {/* Filename tab */}
+          <div
+            className="inline-flex items-center gap-x-2 px-4 py-2"
+            style={{
+              background: T.surface,
+              boxShadow: `inset 0 0 0 1px ${T.ring}, inset 0 -1px 0 ${T.surface}`,
+              fontFamily: T.fontMono,
+              fontSize: 12.5,
+              color: T.inkMid,
+              letterSpacing: "-0.1px",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 8,
+                background: T.accent,
+                display: "inline-block",
+              }}
+            />
+            agent.ts
+          </div>
+
+          {/* Body */}
+          <pre
+            className="overflow-x-auto p-6 text-[13.5px] leading-[22px]"
+            style={{
+              background: T.surface,
+              boxShadow: E.card,
+              fontFamily: T.fontMono,
+              letterSpacing: "-0.1px",
+              tabSize: 2,
+            }}
+          >
+            {snippet.map((parts, lineIdx) => (
+              <div key={lineIdx} style={{ minHeight: 22 }}>
+                {parts.map(([text, tone], partIdx) => (
+                  <span
+                    key={partIdx}
+                    style={{
+                      color: inkForTone(tone),
+                      fontWeight: tone === "kw" ? 600 : 400,
+                    }}
+                  >
+                    {text}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </pre>
+        </div>
+
+        <div className="mt-8 flex items-center justify-center gap-x-6">
+          <Link
+            href="#"
+            className="inline-flex items-center gap-x-1.5 text-[14px] font-medium leading-[22px]"
+            style={{ color: T.accentText, letterSpacing: "-0.1px" }}
+          >
+            Full API reference
+            <DoorArrow />
+          </Link>
+          <Link
+            href="#"
+            className="inline-flex items-center gap-x-1.5 text-[14px] font-medium leading-[22px]"
+            style={{ color: T.inkMid, letterSpacing: "-0.1px" }}
+          >
+            Open in a sandbox
+            <DoorArrow />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── OutcomeStrip ─────────────────────────────────────────────────────
+// Business-outcome counterpart to WhyTrust. WhyTrust publishes the
+// engineering numbers (TTFB, languages, throughput); this strip
+// publishes the numbers a CX procurement team actually scans for:
+// containment, cost cut, time-to-launch, CSAT delta. The two together
+// answer "is the engineering serious" and "is the ROI real".
+//
+// IMPORTANT: every number below is a representative draft. Replace
+// each one with the real figure aggregated from production customers
+// (or pull from a single anchor case study you have permission to
+// quote). Numbers without provenance kill credibility — keep this
+// section accurate or pull it.
+function OutcomeStrip() {
+  type Metric = { value: string; label: string };
+  const metrics: Metric[] = [
+    {
+      value: "78%",
+      label: "of calls fully contained, no human handoff",
+    },
+    {
+      value: "61%",
+      label: "lower cost per resolved conversation",
+    },
+    {
+      value: "1 day",
+      label: "from kickoff to first live production call",
+    },
+    {
+      value: "+22",
+      label: "CSAT points versus the prior IVR baseline",
+    },
+  ];
+
+  return (
+    <section className="px-5 pt-4 sm:px-6">
+      <div className="mx-auto max-w-[1180px]">
+        <SectionHeading>
+          What that looks like in the{" "}
+          <span style={{ color: T.accent }}>quarterly&nbsp;review.</span>
+        </SectionHeading>
+        <p
+          className="mt-4 max-w-[620px] text-pretty text-[15px] leading-[24px] md:mx-auto md:text-center"
+          style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
+        >
+          Aggregated across support, sales, and healthcare deployments
+          running on Resonate today. Methodology and per-customer
+          numbers available on&nbsp;request.
+        </p>
+
+        {/* Grid-gap-as-hairline: the parent paints a ring-coloured
+            background; each cell paints the page colour over it; the
+            1px gap between cells becomes the hairline. Same hairline
+            on both axes, both breakpoints, without per-cell border
+            arithmetic. */}
+        <div
+          className="mt-12 grid grid-cols-2 gap-px md:grid-cols-4"
+          style={{
+            background: T.ring,
+            borderTop: `1px solid ${T.ring}`,
+            borderBottom: `1px solid ${T.ring}`,
+          }}
+        >
+          {metrics.map((m) => (
+            <div
+              key={m.label}
+              className="px-6 py-8 md:px-8 md:py-10"
+              style={{ background: T.page }}
+            >
+              <p
+                className="text-[40px] font-medium leading-[44px] md:text-[48px] md:leading-[52px]"
+                style={{
+                  fontFamily: T.fontDisplay,
+                  color: T.accent,
+                  letterSpacing: "-1px",
+                }}
+              >
+                {m.value}
+              </p>
+              <p
+                className="mt-3 text-pretty text-[13.5px] leading-[20px]"
+                style={{
+                  color: T.inkSoft,
+                  letterSpacing: "-0.1px",
+                }}
+              >
+                {m.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Inline chevron arrow used on the ThreeDoors CTAs. Standalone so the
+// markup of each card stays scan-able.
+function DoorArrow() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M6 4l4 4-4 4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ─── StitchedVsResonate ───────────────────────────────────────────────
+// Two-part comparison band. The top half is an architecture diagram
+// (stitched pipeline vs. Resonate runtime) showing the latency story
+// in concrete shapes. The bottom half is a radar chart plotting the
+// remaining five dimensions (model freedom, languages, compliance,
+// time to launch, on-call) plus latency, with Resonate's polygon
+// overlaid on the stitched polygon so the area difference IS the
+// argument. An overall-score badge in the corner gives a numeric
+// anchor; the radar shape carries the visual one.
+function StitchedVsResonate() {
+  // Per-axis scores 0-100. These are honest characterisations: the
+  // stitched pipeline lands ~25-40 on every dimension, Resonate lands
+  // ~85-95. The shape contrast is the read; precise numbers matter
+  // less than the polygon coverage.
+  type RadarAxis = { label: string; old: number; res: number };
+  const axes: RadarAxis[] = [
+    { label: "Latency",        old: 25, res: 95 },
+    { label: "Model freedom",  old: 30, res: 92 },
+    { label: "Languages",      old: 35, res: 95 },
+    { label: "Compliance",     old: 40, res: 90 },
+    { label: "Time to launch", old: 25, res: 95 },
+    { label: "On-call",        old: 30, res: 92 },
+  ];
+
+  return (
+    <section className="px-5 pt-4 sm:px-6">
+      <div className="mx-auto max-w-[1180px]">
+        <SectionHeading>
+          Stitching it together vs.{" "}
+          <span style={{ color: T.accent }}>one&nbsp;stream.</span>
+        </SectionHeading>
+        <p
+          className="mt-4 max-w-[640px] text-pretty text-[15px] leading-[24px] md:mx-auto md:text-center"
+          style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
+        >
+          The same call drawn two ways. Latency on each hop is what the
+          caller&nbsp;hears.
+        </p>
+
+        {/* Architecture diagram — full-width SVG showing the per-hop
+            latency story. */}
+        <div className="mt-12">
+          <ArchitectureDiagram />
+        </div>
+
+        {/* Radar chart — six dimensions plotted as overlapping
+            polygons. The contrast in covered area carries the
+            non-latency comparison without needing a paragraph per
+            dimension. */}
+        <div className="mt-8">
+          <ComparisonRadar axes={axes} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ComparisonRadar — six-axis radar plotting Stitched (dim hairline
+// polygon) vs. Resonate (filled accent polygon). Two-column panel:
+// chart fills the left ~60% on md+ with axis labels around the
+// perimeter; the right column carries the headline score, the
+// comparator number, and the legend. Single column on phone (chart
+// on top, copy below). SVG is responsive via preserveAspectRatio.
+function ComparisonRadar({
+  axes,
+}: {
+  axes: { label: string; old: number; res: number }[];
+}) {
+  // ViewBox is wider than tall to give axis labels enough horizontal
+  // room. The right-hemisphere labels ("Model freedom", "Languages")
+  // anchor "start" at the polygon's right edge and run outward, and
+  // the left-hemisphere labels ("Time to launch", "On-call") anchor
+  // "end" and run inward. A 560-wide box with R=175 cropped the
+  // 18px label text at "Model freedo[m]" — bumping W to 760 leaves
+  // ~110px of horizontal breathing room on each side for label glyphs.
+  const W = 760;
+  const H = 480;
+  const cx = W / 2;
+  const cy = H / 2;
+  const R = 175;
+  const N = axes.length;
+
+  const angleAt = (i: number) => (-Math.PI / 2) + (i / N) * 2 * Math.PI;
+  const point = (i: number, score: number) => {
+    const a = angleAt(i);
+    const r = (score / 100) * R;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  };
+  const spokeEnd = (i: number) => point(i, 100);
+  const toPoints = (pts: { x: number; y: number }[]) =>
+    pts.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
+
+  const stitchedPts = axes.map((a, i) => point(i, a.old));
+  const resonatePts = axes.map((a, i) => point(i, a.res));
+  const ringPolygon = (pct: number) =>
+    toPoints(axes.map((_, i) => point(i, pct)));
+
+  const avgRes = Math.round(
+    axes.reduce((s, a) => s + a.res, 0) / axes.length,
+  );
+  const avgOld = Math.round(
+    axes.reduce((s, a) => s + a.old, 0) / axes.length,
+  );
+
+  // Axis label positioning. Anchor flips at the left/right
+  // hemispheres so labels don't overhang the chart polygon.
+  const labelPos = (i: number) => {
+    const a = angleAt(i);
+    const r = R + 24;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    let anchor: "start" | "middle" | "end" = "middle";
+    if (Math.cos(a) > 0.2) anchor = "start";
+    else if (Math.cos(a) < -0.2) anchor = "end";
+    return { x, y, anchor };
+  };
+
+  return (
+    <div
+      style={{
+        background: T.surface,
+        boxShadow: E.card,
+      }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] md:items-center">
+        {/* ── Chart column ───────────────────────────────────────── */}
+        <div className="px-6 pt-8 pb-2 md:px-8 md:pt-10 md:pb-10">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            width="100%"
+            preserveAspectRatio="xMidYMid meet"
+            aria-hidden
+            style={{ display: "block" }}
+          >
+            {/* Concentric guide rings at 33/66/100%. */}
+            {[33, 66, 100].map((pct, i) => (
+              <polygon
+                key={pct}
+                points={ringPolygon(pct)}
+                fill="none"
+                stroke={T.ring}
+                strokeWidth={1}
+                strokeDasharray={i === 2 ? "0" : "3 4"}
+              />
+            ))}
+
+            {/* Spokes from centre to each axis vertex */}
+            {axes.map((_, i) => {
+              const end = spokeEnd(i);
+              return (
+                <line
+                  key={i}
+                  x1={cx}
+                  y1={cy}
+                  x2={end.x}
+                  y2={end.y}
+                  stroke={T.ring}
+                  strokeWidth={1}
+                />
+              );
+            })}
+
+            {/* Stitched polygon — bumped opacity + stroke so it
+                actually reads behind the Resonate polygon. The
+                previous 0.18 / 1.4 was disappearing on light surface. */}
+            <polygon
+              points={toPoints(stitchedPts)}
+              fill={T.inkLine}
+              fillOpacity={0.35}
+              stroke={T.inkSoft}
+              strokeWidth={1.8}
+            />
+            {/* Stitched vertex dots — same size as Resonate dots so
+                neither series reads as the "leftover". */}
+            {stitchedPts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={3.5} fill={T.inkSoft} />
+            ))}
+
+            {/* Resonate polygon — strong accent fill + stroke. */}
+            <polygon
+              points={toPoints(resonatePts)}
+              fill={T.accent}
+              fillOpacity={0.42}
+              stroke={T.accent}
+              strokeWidth={2}
+            />
+            {resonatePts.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={3.5} fill={T.accent} />
+            ))}
+
+            {/* Axis labels — sit outside the outer ring at each axis
+                endpoint. Font size 18 in the viewBox so they render
+                cleanly at desktop sizes (the chart column is ~600px
+                wide on a 1180px section). */}
+            {axes.map((a, i) => {
+              const pos = labelPos(i);
+              return (
+                <text
+                  key={a.label}
+                  x={pos.x}
+                  y={pos.y}
+                  fontFamily="var(--font-sans)"
+                  fontSize={18}
+                  fontWeight={500}
+                  fill={T.ink}
+                  textAnchor={pos.anchor}
+                  dominantBaseline="middle"
+                  letterSpacing="-0.1px"
+                >
+                  {a.label}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* ── Copy column — headline, score, legend ────────────────
+            The hairline divider separating chart from copy is a top
+            rule on phone (stacked layout) and a left rule on md+
+            (side-by-side). Tailwind handles the breakpoint flip. */}
+        <div
+          className="flex flex-col gap-y-6 border-t px-6 pb-8 pt-8 md:gap-y-8 md:border-t-0 md:border-l md:px-10 md:pb-10 md:pt-10"
+          style={{ borderColor: T.ring }}
+        >
+          <div>
+            <span
+              className="text-[12px] font-medium leading-[18px]"
+              style={{
+                fontFamily: T.fontMono,
+                color: T.inkMid,
+                letterSpacing: "-0.05px",
+              }}
+            >
+              Coverage by dimension
+            </span>
+            <h3
+              className="mt-3 text-balance text-[24px] font-medium leading-[30px] md:text-[26px] md:leading-[32px]"
+              style={{
+                fontFamily: T.fontDisplay,
+                color: T.ink,
+                letterSpacing: "-0.4px",
+              }}
+            >
+              Resonate scores higher on every&nbsp;axis.
+            </h3>
+          </div>
+
+          {/* Score block — big Resonate number stacked over the
+              stitched comparator. The visual mass here mirrors what
+              the polygons say at a glance. */}
+          <div className="flex flex-col gap-y-3">
+            <div className="flex items-baseline gap-x-3">
+              <span
+                className="text-[56px] font-medium leading-[56px] md:text-[64px] md:leading-[64px]"
+                style={{
+                  fontFamily: T.fontDisplay,
+                  color: T.accent,
+                  letterSpacing: "-1.6px",
+                }}
+              >
+                {avgRes}%
+              </span>
+              <span
+                className="text-[14px] leading-[20px]"
+                style={{ color: T.inkSoft, letterSpacing: "-0.1px" }}
+              >
+                with Resonate
+              </span>
+            </div>
+            <div className="flex items-baseline gap-x-2">
+              <span
+                className="text-[24px] font-medium leading-[28px]"
+                style={{
+                  fontFamily: T.fontDisplay,
+                  color: T.inkSoft,
+                  letterSpacing: "-0.6px",
+                }}
+              >
+                {avgOld}%
+              </span>
+              <span
+                className="text-[13px] leading-[18px]"
+                style={{ color: T.inkSubtle, letterSpacing: "-0.05px" }}
+              >
+                stitched pipeline
+              </span>
+            </div>
+          </div>
+
+          {/* Legend — two swatches matching the polygon colours. */}
+          <div className="flex flex-col gap-y-2 pt-2" style={{ borderTop: `1px solid ${T.ring}` }}>
+            <div className="flex items-center gap-x-3 pt-3">
+              <span
+                aria-hidden
+                style={{
+                  width: 14,
+                  height: 14,
+                  background: T.accent,
+                  display: "inline-block",
+                }}
+              />
+              <span
+                className="text-[13px] leading-[20px]"
+                style={{ color: T.inkMid, letterSpacing: "-0.05px" }}
+              >
+                With Resonate
+              </span>
+            </div>
+            <div className="flex items-center gap-x-3">
+              <span
+                aria-hidden
+                style={{
+                  width: 14,
+                  height: 14,
+                  background: T.inkLine,
+                  display: "inline-block",
+                }}
+              />
+              <span
+                className="text-[13px] leading-[20px]"
+                style={{ color: T.inkMid, letterSpacing: "-0.05px" }}
+              >
+                Stitched pipeline
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ArchitectureDiagram — the diagram for StitchedVsResonate. Renders
+// two architecture sketches side-by-side: the stitched pipeline as a
+// chain of five vendor boxes with per-hop latency badges, and
+// Resonate as a single unified block with one 90ms TTFB badge. SVG
+// at viewBox 1100×340 so both halves get plenty of room; the SVG
+// scales to container width via preserveAspectRatio.
+function ArchitectureDiagram() {
+  // Vendor boxes for the stitched side. 5 hops; each box is 86×44.
+  // Latency between hops is shown as a small accent-coloured pill
+  // on the connector line. The total stacks to ~2.2s, which sits as
+  // a strong badge at the right edge of the left half.
+  const STITCHED = [
+    { label: "Telephony" },
+    { label: "STT vendor" },
+    { label: "LLM API" },
+    { label: "TTS vendor" },
+    { label: "PII proxy" },
+  ];
+  const HOP_LATENCIES = ["420 ms", "380 ms", "640 ms", "490 ms"];
+
+  // viewBox geometry. Bumped from 1100×340 to 1180×420 so both
+  // halves have proper internal padding (was 12px on the left,
+  // cropping the caller marker) and the headlines + totals get
+  // breathing room above and below the chain.
+  const W = 1180;
+  const H = 420;
+  // Left half occupies x ∈ [0, 560]; right half occupies x ∈ [620, W].
+  // Internal padding inset is 40px on each side so the chain doesn't
+  // kiss the panel edges.
+  const PAD = 40;
+  const LEFT_END = 560;
+  const RIGHT_START = 620;
+  const ROW_Y = 200; // Vertical centre of both pipelines (more headroom)
+  const BOX_W = 84;
+  const BOX_H = 48;
+
+  // Heading baseline — sits 60px above the row centre, in the
+  // panel's top padding zone.
+  const HEAD_Y = 80;
+  // Total-latency / TTFB badge baseline — sits 100px below the row
+  // centre with enough room for a display-type number.
+  const TOTAL_Y = ROW_Y + BOX_H + 64;
+  // Caller dot positions — inset from the panel edges so labels
+  // anchor cleanly. Left caller at PAD; right caller at RIGHT_START + PAD.
+  const LEFT_CALLER_X = PAD;
+  const RIGHT_CALLER_X = RIGHT_START + PAD;
+  // Stitched boxes start AFTER the caller marker + a 24px gap.
+  const STITCHED_START_X = LEFT_CALLER_X + 24;
+  // 5 boxes × 84 = 420; available between STITCHED_START_X and
+  // (LEFT_END - PAD) = 560 - 40 - (40+24) = 456px. 456 - 420 = 36
+  // shared among 4 gaps = 9px each.
+  const STITCHED_GAP = 9;
+  const stitchedX = (i: number) =>
+    STITCHED_START_X + i * (BOX_W + STITCHED_GAP);
+
+  return (
+    <div
+      style={{
+        background: T.surface,
+        boxShadow: E.card,
+      }}
+    >
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden
+        style={{ display: "block" }}
+      >
+        {/* ── Headings for each half — promoted to 18px and given
+            proper baseline above the row. They now sit in the panel's
+            top padding zone with breathing room before the diagram
+            starts. ─────────────────────────────────────────────── */}
+        <text
+          x={PAD}
+          y={HEAD_Y}
+          fontFamily="var(--font-sans)"
+          fontSize={18}
+          fontWeight={500}
+          fill={T.inkMid}
+          letterSpacing="-0.2px"
+        >
+          The stitched way
+        </text>
+        <text
+          x={RIGHT_START + PAD}
+          y={HEAD_Y}
+          fontFamily="var(--font-sans)"
+          fontSize={18}
+          fontWeight={500}
+          fill={T.accentText}
+          letterSpacing="-0.2px"
+        >
+          With Resonate
+        </text>
+
+        {/* ── Vertical divider between halves ──────────────────── */}
+        <line
+          x1={(LEFT_END + RIGHT_START) / 2}
+          y1={40}
+          x2={(LEFT_END + RIGHT_START) / 2}
+          y2={H - 40}
+          stroke={T.ring}
+          strokeWidth={1}
+          strokeDasharray="2 4"
+        />
+
+        {/* ────────────────────────────────────────────────────────
+            LEFT HALF — stitched pipeline
+            ──────────────────────────────────────────────────────── */}
+
+        {/* Inbound caller marker — inset from edge with label anchored
+            "start" so it doesn't crop at the panel boundary. */}
+        <g>
+          <circle
+            cx={LEFT_CALLER_X}
+            cy={ROW_Y + BOX_H / 2}
+            r={5}
+            fill={T.inkSoft}
+          />
+          <text
+            x={LEFT_CALLER_X}
+            y={ROW_Y + BOX_H + 24}
+            fontFamily="var(--font-mono)"
+            fontSize={11}
+            fill={T.inkSubtle}
+            textAnchor="middle"
+            letterSpacing="-0.05px"
+          >
+            caller
+          </text>
+        </g>
+
+        {/* Vendor boxes + connectors */}
+        {STITCHED.map((s, i) => {
+          const x = stitchedX(i);
+          const y = ROW_Y;
+          return (
+            <g key={s.label}>
+              {/* Connector from previous box (or from caller marker
+                  for i=0). */}
+              {(() => {
+                const fromX = i === 0 ? LEFT_CALLER_X + 6 : stitchedX(i - 1) + BOX_W;
+                const fromY = y + BOX_H / 2;
+                return (
+                  <line
+                    x1={fromX}
+                    y1={fromY}
+                    x2={x}
+                    y2={fromY}
+                    stroke={T.inkLine}
+                    strokeWidth={1.2}
+                  />
+                );
+              })()}
+              {/* Box */}
+              <rect
+                x={x}
+                y={y}
+                width={BOX_W}
+                height={BOX_H}
+                fill={T.surface}
+                stroke={T.inkLine}
+                strokeWidth={1}
+              />
+              <text
+                x={x + BOX_W / 2}
+                y={y + BOX_H / 2 + 4}
+                fontFamily="var(--font-sans)"
+                fontSize={12}
+                fontWeight={500}
+                fill={T.ink}
+                textAnchor="middle"
+                letterSpacing="-0.1px"
+              >
+                {s.label}
+              </text>
+              {/* Latency badge ABOVE the connector to this box. */}
+              {i > 0 && (
+                <g>
+                  {(() => {
+                    const midX = (stitchedX(i - 1) + BOX_W + x) / 2;
+                    const badgeY = y - 18;
+                    return (
+                      <>
+                        <rect
+                          x={midX - 24}
+                          y={badgeY - 12}
+                          width={48}
+                          height={18}
+                          fill={T.panel}
+                          stroke={T.ring}
+                          strokeWidth={1}
+                        />
+                        <text
+                          x={midX}
+                          y={badgeY + 1}
+                          fontFamily="var(--font-mono)"
+                          fontSize={10.5}
+                          fill={T.inkMid}
+                          textAnchor="middle"
+                          letterSpacing="-0.05px"
+                        >
+                          {HOP_LATENCIES[i - 1]}
+                        </text>
+                      </>
+                    );
+                  })()}
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {/* TOTAL LATENCY — promoted to a display-type readout.
+            ~1.9s sits in the lower section of the left half in the
+            same size/weight family as the 90ms TTFB badge on the
+            right, but rendered as ink (not filled accent) because
+            it's the unwanted outcome. "What the caller hears" sits
+            below it as a one-line caption. */}
+        <text
+          x={PAD + 100}
+          y={TOTAL_Y}
+          fontFamily="var(--font-sans)"
+          fontSize={32}
+          fontWeight={500}
+          fill={T.ink}
+          letterSpacing="-0.8px"
+        >
+          ≈ 1.9s
+        </text>
+        <text
+          x={PAD + 100 + 86}
+          y={TOTAL_Y - 4}
+          fontFamily="var(--font-sans)"
+          fontSize={13}
+          fill={T.inkSoft}
+          letterSpacing="-0.1px"
+        >
+          before
+        </text>
+        <text
+          x={PAD + 100 + 86}
+          y={TOTAL_Y + 12}
+          fontFamily="var(--font-sans)"
+          fontSize={13}
+          fill={T.inkSoft}
+          letterSpacing="-0.1px"
+        >
+          first syllable
+        </text>
+
+        {/* ────────────────────────────────────────────────────────
+            RIGHT HALF — Resonate as one unified block
+            ──────────────────────────────────────────────────────── */}
+
+        {/* Inbound caller marker on the right side */}
+        <g>
+          <circle
+            cx={RIGHT_CALLER_X}
+            cy={ROW_Y + BOX_H / 2}
+            r={5}
+            fill={T.accent}
+          />
+          <text
+            x={RIGHT_CALLER_X}
+            y={ROW_Y + BOX_H + 24}
+            fontFamily="var(--font-mono)"
+            fontSize={11}
+            fill={T.inkSubtle}
+            textAnchor="middle"
+            letterSpacing="-0.05px"
+          >
+            caller
+          </text>
+        </g>
+
+        {/* The unified Resonate block. Expanded to use more of the
+            right half's horizontal space so it visually balances the
+            5-box stitched chain on the left. */}
+        {(() => {
+          const blockX = RIGHT_CALLER_X + 24;
+          // Right edge of the block ends before the 90ms TTFB badge,
+          // which is 132px wide + 24px connector + PAD inset.
+          const blockEndX = W - PAD - 132 - 24;
+          const blockW = blockEndX - blockX;
+          const compW = blockW / 4;
+          const compartments = ["Telephony", "Voice", "Reasoning", "Tools"];
+          return (
+            <g>
+              {/* Connector from caller dot into block left edge */}
+              <line
+                x1={RIGHT_CALLER_X + 6}
+                y1={ROW_Y + BOX_H / 2}
+                x2={blockX}
+                y2={ROW_Y + BOX_H / 2}
+                stroke={T.accent}
+                strokeWidth={1.6}
+              />
+              {/* The block */}
+              <rect
+                x={blockX}
+                y={ROW_Y}
+                width={blockW}
+                height={BOX_H}
+                fill={T.surface}
+                stroke={T.accent}
+                strokeWidth={1.6}
+              />
+              {/* Internal compartment dividers */}
+              {[1, 2, 3].map((i) => (
+                <line
+                  key={i}
+                  x1={blockX + compW * i}
+                  y1={ROW_Y + 8}
+                  x2={blockX + compW * i}
+                  y2={ROW_Y + BOX_H - 8}
+                  stroke={T.accent}
+                  strokeOpacity={0.4}
+                  strokeWidth={1}
+                  strokeDasharray="2 3"
+                />
+              ))}
+              {/* Compartment labels */}
+              {compartments.map((c, i) => (
+                <text
+                  key={c}
+                  x={blockX + compW * i + compW / 2}
+                  y={ROW_Y + BOX_H / 2 + 4}
+                  fontFamily="var(--font-sans)"
+                  fontSize={12}
+                  fontWeight={500}
+                  fill={T.ink}
+                  textAnchor="middle"
+                  letterSpacing="-0.1px"
+                >
+                  {c}
+                </text>
+              ))}
+              {/* Block name label above the block — slightly larger
+                  to match the heading scale flip we did. */}
+              <text
+                x={blockX + blockW / 2}
+                y={ROW_Y - 18}
+                fontFamily="var(--font-sans)"
+                fontSize={12}
+                fontWeight={500}
+                fill={T.accentText}
+                textAnchor="middle"
+                letterSpacing="-0.05px"
+              >
+                One runtime, one SDK
+              </text>
+              {/* 90ms TTFB badge — kept at the same compact pill
+                  shape but a touch larger to match the promoted left-
+                  side total. The connector line from block to badge
+                  stays clean. */}
+              <line
+                x1={blockEndX}
+                y1={ROW_Y + BOX_H / 2}
+                x2={blockEndX + 24}
+                y2={ROW_Y + BOX_H / 2}
+                stroke={T.accent}
+                strokeWidth={1.6}
+              />
+              <rect
+                x={blockEndX + 24}
+                y={ROW_Y + BOX_H / 2 - 18}
+                width={132}
+                height={36}
+                fill={T.accent}
+              />
+              <text
+                x={blockEndX + 24 + 66}
+                y={ROW_Y + BOX_H / 2 + 5}
+                fontFamily="var(--font-sans)"
+                fontSize={15}
+                fontWeight={600}
+                fill="#ffffff"
+                textAnchor="middle"
+                letterSpacing="-0.1px"
+              >
+                90 ms TTFB
+              </text>
+              {/* p95 subnote below the block, aligned with the same
+                  baseline as the left-half "before first syllable"
+                  caption so both halves' bottom lines align. */}
+              <text
+                x={blockX + blockW / 2}
+                y={TOTAL_Y - 6}
+                fontFamily="var(--font-mono)"
+                fontSize={11}
+                fill={T.inkSubtle}
+                textAnchor="middle"
+                letterSpacing="-0.05px"
+              >
+                p50 90 ms · p95 180 ms
+              </text>
+            </g>
+          );
+        })()}
+
+        {/* Bottom-of-block contextual captions — one per half. They
+            align at the same y, sized as readable body text. */}
+        <text
+          x={PAD}
+          y={H - 30}
+          fontFamily="var(--font-sans)"
+          fontSize={13}
+          fill={T.inkSoft}
+          letterSpacing="-0.1px"
+        >
+          The caller hears silence before the first syllable.
+        </text>
+        <text
+          x={RIGHT_START + PAD}
+          y={H - 30}
+          fontFamily="var(--font-sans)"
+          fontSize={13}
+          fill={T.inkSoft}
+          letterSpacing="-0.1px"
+        >
+          The caller never hears the join.
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+
+// ─── Integrations ─────────────────────────────────────────────────────
+// Pipeline-style integrations panel. Four stages — Telephony, Voice
+// stack, Language models, Apps & data — laid out left-to-right with
+// thin connector rules and arrows between them, echoing how a call
+// actually flows through the system. Each stage shows ~4-6 logos.
+// Real brand SVG paths inline for the recognisable brands (Twilio,
+// OpenAI, etc.); typographic wordmark fallback for the rest. All
+// logos render at a single ink weight so the row reads as one
+// family rather than a multi-colour logo zoo.
+//
+// Brand logo SVG paths below are from simple-icons (CC0 license).
+// All rendered at currentColor at the project's ink token so the
+// row stays paper-toned and visually consistent.
+type BrandLogo = {
+  name: string;
+  // SVG path data for the brand mark, viewBox 24×24 (simple-icons
+  // standard). If undefined, the BrandTile renders the wordmark
+  // typographically instead.
+  path?: string;
+};
+
+// Subset of simple-icons paths for the recognisable brands. These
+// are the logos a voice-AI buyer expects to see when they scan an
+// integrations panel.
+const BRAND_LOGOS: Record<string, string> = {
+  twilio:
+    "M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm0 21.6C6.7 21.6 2.4 17.3 2.4 12S6.7 2.4 12 2.4s9.6 4.3 9.6 9.6-4.3 9.6-9.6 9.6zm5.7-11.4a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm-7.5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm7.5 7.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm-7.5 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0z",
+  openai:
+    "M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.682zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z",
+  anthropic:
+    "M17.3043 3.625H13.7568L20.2 20.375H23.7475L17.3043 3.625ZM6.762 3.625L0.319336 20.375H3.94013L5.26033 16.9275H11.9913L13.3114 20.375H16.9322L10.4895 3.625H6.762ZM6.4087 13.9252L8.6258 8.1407L10.8429 13.9252H6.4087Z",
+  salesforce:
+    "M10.006 5.415a4.195 4.195 0 0 1 3.045-1.306c1.56 0 2.954.9 3.69 2.205.63-.3 1.35-.45 2.1-.45 2.85 0 5.159 2.34 5.159 5.22 0 2.879-2.31 5.219-5.16 5.219-.345 0-.69-.044-1.02-.104a3.75 3.75 0 0 1-3.27 1.95c-.6 0-1.155-.15-1.65-.404a4.302 4.302 0 0 1-3.989 2.624c-1.74 0-3.27-1.005-3.989-2.504a3.985 3.985 0 0 1-.81.074C1.8 17.939 0 16.17 0 13.984c0-1.47.81-2.744 1.995-3.434a4.6 4.6 0 0 1-.39-1.83c0-2.534 2.085-4.59 4.65-4.59 1.515 0 2.85.72 3.704 1.83",
+  hubspot:
+    "M18.164 7.93V5.084a2.198 2.198 0 0 0 1.267-1.978v-.067A2.2 2.2 0 0 0 17.238.845h-.067a2.2 2.2 0 0 0-2.193 2.194v.067a2.196 2.196 0 0 0 1.252 1.973l.013.005V7.93a6.243 6.243 0 0 0-2.969 1.31L13.27 9.23 5.487 3.168a2.5 2.5 0 1 0-1.155 1.495l-.014.008 7.66 5.965a6.232 6.232 0 0 0-1.05 3.456c0 1.36.436 2.62 1.176 3.65l-.011-.018-2.332 2.336a2.01 2.01 0 0 0-.585-.093H9.17a2.034 2.034 0 1 0 .046 4.067h.046a2.029 2.029 0 0 0 1.952-2.06v-.005a2.024 2.024 0 0 0-.094-.598l.004.014L13.46 18.9a6.27 6.27 0 0 0 11.041-4.81l.001.013a6.282 6.282 0 0 0-6.318-6.184l-.02-.001Zm-.36 9.396a3.22 3.22 0 1 1 .009-6.44 3.22 3.22 0 0 1-.009 6.44Z",
+  zendesk:
+    "M11.1808 7.0732v15.2754H0L11.1808 7.0732zM11.1808 1.6514a5.589 5.589 0 0 1-11.1798 0h11.1798zM12.8192 22.3486a5.589 5.589 0 0 1 11.1798 0H12.8192zM12.8192 16.9268V1.6514H24L12.8192 16.9268z",
+  intercom:
+    "M22 0H2C.9 0 0 .9 0 2v20c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2zm-6.4 4c0-.44.36-.8.8-.8.44 0 .8.36.8.8v9.6c0 .44-.36.8-.8.8-.44 0-.8-.36-.8-.8V4zm-3.99-.4c0-.44.36-.8.8-.8.44 0 .8.36.8.8v10.4c0 .44-.36.8-.8.8-.44 0-.8-.36-.8-.8V3.6zm-4 .4c0-.44.36-.8.8-.8.44 0 .8.36.8.8v9.6c0 .44-.36.8-.8.8-.44 0-.8-.36-.8-.8V4zm-4 .8c0-.44.36-.8.8-.8.44 0 .8.36.8.8v8c0 .44-.36.8-.8.8-.44 0-.8-.36-.8-.8v-8zm17.06 13.86c-.16.13-3.94 3.34-8.67 3.34S3.49 18.79 3.34 18.66c-.34-.29-.38-.79-.09-1.13.29-.34.79-.38 1.12-.1.06.05 3.47 2.91 7.62 2.91 4.2 0 7.58-2.87 7.61-2.91.34-.29.84-.25 1.13.09.29.34.25.85-.09 1.13zM20.4 12.8c0 .44-.36.8-.8.8-.44 0-.8-.36-.8-.8V4.8c0-.44.36-.8.8-.8.44 0 .8.36.8.8v8z",
+  notion:
+    "M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933z",
+};
+
+// Auto-advance interval per tab, in ms. 3.5s reads as a comfortable
+// "tour" pace — slow enough to read each panel, fast enough that
+// all four cycle in 14s. Shared with the progress-bar animation.
+const INTEGRATIONS_TAB_MS = 3500;
+
+function Integrations() {
+  type Stage = {
+    name: string;
+    sub: string;
+    items: { name: string; key?: keyof typeof BRAND_LOGOS }[];
+  };
+  // Stages flow in call order: a call enters via Telephony, is
+  // processed by the Voice stack, reasons via a Language model,
+  // and acts on Apps & data.
+  const stages: Stage[] = [
+    {
+      name: "Telephony",
+      sub: "Carriers and SIP trunks. Bring your own number.",
+      items: [
+        { name: "Twilio", key: "twilio" },
+        { name: "Plivo" },
+        { name: "Telnyx" },
+        { name: "SignalWire" },
+      ],
+    },
+    {
+      name: "Voice stack",
+      sub: "Streaming TTS and STT. Use ours or swap any vendor.",
+      items: [
+        { name: "Resonate TTS" },
+        { name: "Resonate STT" },
+        { name: "ElevenLabs" },
+        { name: "Cartesia" },
+        { name: "Deepgram" },
+      ],
+    },
+    {
+      name: "Language models",
+      sub: "Reasoning and tool-use. Per route, per language, per call.",
+      items: [
+        { name: "OpenAI", key: "openai" },
+        { name: "Anthropic", key: "anthropic" },
+        { name: "Gemini" },
+        { name: "Llama" },
+        { name: "Mistral" },
+        { name: "Your fine-tune" },
+      ],
+    },
+    {
+      name: "Apps and data",
+      sub: "Where calls land. CRMs, helpdesks, your warehouse.",
+      items: [
+        { name: "Salesforce", key: "salesforce" },
+        { name: "HubSpot", key: "hubspot" },
+        { name: "Zendesk", key: "zendesk" },
+        { name: "Intercom", key: "intercom" },
+        { name: "Notion", key: "notion" },
+        { name: "Snowflake" },
+      ],
+    },
+  ];
+
+  // Auto-advancing tab state. `active` is the visible tab; `paused`
+  // freezes the auto-advance (set on hover, click, or reduced-motion).
+  // `tick` is a re-render trigger for the progress-bar fill — it
+  // resets to 0 on every tab change and runs to 1 over INTEGRATIONS_TAB_MS.
+  const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const tabStartRef = useRef<number>(0);
+
+  // Honour prefers-reduced-motion — pause auto-advance entirely and
+  // freeze the progress bar at zero so no looping animation runs.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const apply = () => {
+      if (mq.matches) setPaused(true);
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // Auto-advance + progress-bar driver. Single rAF loop reads the
+  // current time, computes how much of the tab window has elapsed,
+  // and either updates the progress bar or rolls to the next tab.
+  useEffect(() => {
+    if (paused) return;
+    tabStartRef.current = performance.now();
+    setProgress(0);
+
+    const tick = (now: number) => {
+      const elapsed = now - tabStartRef.current;
+      const pct = Math.min(elapsed / INTEGRATIONS_TAB_MS, 1);
+      setProgress(pct);
+      if (pct >= 1) {
+        // Advance to next tab (wraps).
+        setActive((i) => (i + 1) % stages.length);
+      } else {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+    // `active` is intentionally in the dep array — when it changes
+    // (either via auto-advance or manual click), we restart the
+    // timer from zero for the new tab. `stages.length` is constant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, paused]);
+
+  // Manual tab selection — pauses for ~6s before resuming auto-
+  // advance, so a user click doesn't immediately get overridden by
+  // the next auto-tick.
+  const selectTab = (i: number) => {
+    setActive(i);
+    setPaused(true);
+    window.setTimeout(() => setPaused(false), 6000);
+  };
+
+  return (
+    <section className="px-5 pt-4 sm:px-6">
+      <div className="mx-auto max-w-[1180px]">
+        <SectionHeading>
+          Plugs into the stack you{" "}
+          <span style={{ color: T.accent }}>already&nbsp;have.</span>
+        </SectionHeading>
+        <p
+          className="mt-4 max-w-[620px] text-pretty text-[15px] leading-[24px] md:mx-auto md:text-center"
+          style={{ color: T.inkSoft, letterSpacing: "-0.15px" }}
+        >
+          A call flows through four stages. Pick your vendor at each
+          one, and Resonate keeps the latency&nbsp;budget.
+        </p>
+
+        {/* Tabs panel. Desktop: left-column tabs + right-column logo
+            matrix in a 2-column grid. Phone: tabs stack horizontally
+            as a scroll row above the matrix. Hovering anywhere on the
+            panel pauses auto-advance so a reader can scan without the
+            content moving under their eye. */}
+        <div
+          className="mt-12 grid grid-cols-1 md:grid-cols-[280px_1fr]"
+          style={{
+            background: T.surface,
+            boxShadow: E.card,
+          }}
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+        >
+          {/* ── Tabs (left column on md+, horizontal row on phone) ──
+              The tab strip is separated from the panel below/right by
+              a hairline that flips axis at md+: bottom border on
+              phone (panel sits below the tab row), right border on
+              md+ (panel sits right of the tab column). */}
+          <div
+            className="flex flex-row overflow-x-auto border-b md:flex-col md:border-b-0 md:border-r"
+            style={{ borderColor: T.ring }}
+          >
+            {stages.map((stage, i) => (
+              <IntegrationTab
+                key={stage.name}
+                stage={stage}
+                index={i}
+                isActive={i === active}
+                isLast={i === stages.length - 1}
+                progress={i === active ? progress : 0}
+                onSelect={() => selectTab(i)}
+              />
+            ))}
+          </div>
+
+          {/* ── Active tab's logo matrix ──────────────────────────── */}
+          <div className="p-6 md:p-8">
+            <IntegrationTabPanel
+              stage={stages[active]}
+              key={stages[active].name}
+            />
+          </div>
+        </div>
+
+        <p
+          className="mt-8 text-center text-[13.5px] leading-[22px]"
+          style={{ color: T.inkSubtle, letterSpacing: "-0.1px" }}
+        >
+          Need something not listed?{" "}
+          <Link
+            href="#"
+            className="font-medium transition-colors"
+            style={{ color: T.accentText }}
+          >
+            Ask us
+          </Link>
+          . Most integrations ship in a&nbsp;week.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// A single tab in the Integrations panel. Renders the stage name +
+// sub-line, with an active state indicated by the brand-blue
+// progress rail along the bottom edge (md+) / right edge (phone),
+// filling left-to-right as the auto-advance timer runs. Inactive
+// tabs show a thin hairline rail in the ring colour.
+function IntegrationTab({
+  stage,
+  index,
+  isActive,
+  isLast,
+  progress,
+  onSelect,
+}: {
+  stage: {
+    name: string;
+    sub: string;
+    items: { name: string; key?: keyof typeof BRAND_LOGOS }[];
+  };
+  index: number;
+  isActive: boolean;
+  isLast: boolean;
+  progress: number;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      // Tabs share a hairline separator that flips axis at md+:
+      // phone (horizontal row) → right border between tabs;
+      // desktop (vertical stack) → bottom border between tabs.
+      // Tailwind utilities pick the right axis per breakpoint; the
+      // hairline colour is set via the data attribute below so the
+      // inline style stays per-tab and clean.
+      className={[
+        "relative flex-shrink-0 cursor-pointer text-left transition-colors md:flex-shrink",
+        isLast ? "" : "border-r md:border-r-0 md:border-b",
+      ].join(" ")}
+      style={{
+        background: isActive ? T.surface : T.panel,
+        borderColor: T.ring,
+        padding: 0,
+      }}
+    >
+      <div className="px-5 py-4 md:px-6 md:py-5" style={{ minWidth: 220 }}>
+        <div className="flex items-center gap-x-3">
+          <span
+            className="text-[11px] font-medium leading-[18px]"
+            style={{
+              fontFamily: T.fontMono,
+              color: isActive ? T.accentText : T.inkSubtle,
+              letterSpacing: "-0.05px",
+            }}
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <h3
+            className="text-[15px] font-medium leading-[22px]"
+            style={{
+              color: isActive ? T.ink : T.inkMid,
+              letterSpacing: "-0.1px",
+            }}
+          >
+            {stage.name}
+          </h3>
+        </div>
+        <p
+          className="mt-1.5 text-[13px] leading-[20px]"
+          style={{
+            color: isActive ? T.inkSoft : T.inkSubtle,
+            letterSpacing: "-0.05px",
+          }}
+        >
+          {stage.sub}
+        </p>
+      </div>
+      {/* Progress rail — fills the bottom of the active tab as the
+          timer runs. Inactive tabs show a faint baseline rail so the
+          structure reads as a rail throughout, not just on hover. */}
+      <span
+        aria-hidden
+        className="absolute left-0 right-0 bottom-0"
+        style={{
+          height: 2,
+          background: T.ring,
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute left-0 bottom-0"
+        style={{
+          height: 2,
+          width: isActive ? `${progress * 100}%` : 0,
+          background: T.accent,
+          transition: "width 80ms linear",
+        }}
+      />
+    </button>
+  );
+}
+
+// The right-side content panel — the logo matrix for the active
+// stage. Uses BrandTile under the hood (same vocabulary as the
+// pipeline version this replaced). Mounts with a short opacity
+// fade-in so tab transitions feel intentional rather than a hard
+// swap. The parent passes `key={stage.name}` so React remounts the
+// panel on tab change, retriggering the fade.
+function IntegrationTabPanel({
+  stage,
+}: {
+  stage: {
+    name: string;
+    sub: string;
+    items: { name: string; key?: keyof typeof BRAND_LOGOS }[];
+  };
+}) {
+  return (
+    <div className="osto-int-fade">
+      <ul
+        className="grid grid-cols-2 gap-px sm:grid-cols-3"
+        style={{ background: T.ring }}
+      >
+        {stage.items.map((item) => (
+          <li
+            key={item.name}
+            className="flex items-center gap-x-3 px-4 py-4"
+            style={{ background: T.surface }}
+          >
+            <BrandTile name={item.name} pathKey={item.key} large />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// A single brand integration tile. If the name maps to a known
+// brand path in BRAND_LOGOS, renders the SVG mark + wordmark; if
+// not, renders just the wordmark (a typographic fallback). All
+// glyphs render at currentColor / T.ink so the row reads as one
+// monochrome family rather than a multi-colour logo zoo. The
+// `large` flag bumps glyph + wordmark up a notch for the tabbed
+// panel layout (which has more room than the original pipeline).
+function BrandTile({
+  name,
+  pathKey,
+  large,
+}: {
+  name: string;
+  pathKey?: keyof typeof BRAND_LOGOS;
+  large?: boolean;
+}) {
+  const path = pathKey ? BRAND_LOGOS[pathKey] : undefined;
+  const glyphSize = large ? 22 : 16;
+  const textSize = large ? 14 : 13;
+  return (
+    <div className="flex items-center gap-x-3 min-w-0">
+      {path ? (
+        <svg
+          width={glyphSize}
+          height={glyphSize}
+          viewBox="0 0 24 24"
+          aria-hidden
+          style={{ color: T.ink, flexShrink: 0 }}
+        >
+          <path d={path} fill="currentColor" />
+        </svg>
+      ) : (
+        <span
+          aria-hidden
+          style={{
+            width: glyphSize,
+            height: glyphSize,
+            flexShrink: 0,
+            background: T.panel,
+            display: "inline-block",
+            boxShadow: `inset 0 0 0 1px ${T.ring}`,
+          }}
+        />
+      )}
+      <span
+        className="truncate font-medium leading-[20px]"
+        style={{
+          color: T.ink,
+          letterSpacing: "-0.1px",
+          fontSize: textSize,
+        }}
+      >
+        {name}
+      </span>
+    </div>
+  );
+}
+
+
 // ─── Shared primitives ────────────────────────────────────────────────
 /**
  * SectionHeading — H2 used by every section that doesn't bring its own
@@ -4873,6 +7083,26 @@ function V2Styles() {
           animation: none !important;
           opacity: 1 !important;
           transform: none !important;
+        }
+      }
+
+      /* ─── Integrations tab-panel crossfade ──────────────────────────
+         The right-hand logo matrix in the auto-advancing Integrations
+         tabs panel uses a short opacity fade on remount (parent passes
+         a stage-keyed key so React replaces the panel on tab change).
+         180ms is fast enough that the tab change still feels responsive
+         and slow enough that the swap isn't a hard cut. */
+      @keyframes ostoIntFade {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      .osto-int-fade {
+        animation: ostoIntFade 180ms ease-out both;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .osto-int-fade {
+          animation: none !important;
+          opacity: 1 !important;
         }
       }
 
