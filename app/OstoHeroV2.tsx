@@ -2544,34 +2544,71 @@ function DeltaRow() {
     { from: "3–6 months", to: "An afternoon", label: "Time to ship" },
   ];
   return (
-    <ul
-      className="mt-10 grid grid-cols-1 gap-y-3 md:mt-14 md:grid-cols-3 md:gap-x-12 md:gap-y-0"
+    <div
+      className="mt-12 grid grid-cols-1 gap-px md:mt-16 md:grid-cols-3"
       style={{
-        borderTop: `1px solid ${T.panelHairline}`,
-        paddingTop: 24,
+        background: T.ring,
+        borderTop: `1px solid ${T.ring}`,
+        borderBottom: `1px solid ${T.ring}`,
       }}
     >
       {deltas.map((d) => (
-        <li key={d.label} className="flex items-baseline gap-x-3">
-          <span
+        <div
+          key={d.label}
+          className="px-6 py-8 md:px-8 md:py-10"
+          style={{ background: T.page }}
+        >
+          <p
             className="text-[13px] font-medium"
-            style={{ color: T.inkSubtle, letterSpacing: "-0.13px" }}
+            style={{
+              color: T.inkSubtle,
+              letterSpacing: "-0.13px",
+            }}
           >
             {d.label}
-          </span>
-          <span
-            className="ml-auto flex items-baseline gap-x-2 text-[13px] leading-[20px]"
-            style={{ letterSpacing: "-0.13px" }}
-          >
-            <span style={{ color: T.inkSubtle, textDecoration: "line-through" }}>
+          </p>
+          <div className="mt-5 flex items-baseline gap-x-3">
+            <span
+              className="text-[15px] leading-[20px]"
+              style={{
+                color: T.inkSubtle,
+                textDecoration: "line-through",
+                textDecorationThickness: "1px",
+                letterSpacing: "-0.15px",
+              }}
+            >
               {d.from}
             </span>
-            <span style={{ color: T.inkSubtle }}>to</span>
-            <span style={{ color: T.ink, fontWeight: 600 }}>{d.to}</span>
-          </span>
-        </li>
+            <svg
+              width="14"
+              height="10"
+              viewBox="0 0 14 10"
+              fill="none"
+              aria-hidden
+              style={{ flexShrink: 0, opacity: 0.5 }}
+            >
+              <path
+                d="M1 5h11M9 1l4 4-4 4"
+                stroke={T.inkSubtle}
+                strokeWidth="1.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span
+              className="text-[26px] font-medium leading-[30px] md:text-[30px] md:leading-[34px]"
+              style={{
+                fontFamily: T.fontDisplay,
+                color: T.accent,
+                letterSpacing: "-0.6px",
+              }}
+            >
+              {d.to}
+            </span>
+          </div>
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -6411,7 +6448,7 @@ function IntegrationTab({
           <h3
             className="text-[15px] font-medium leading-[22px]"
             style={{
-              color: isActive ? T.ink : T.inkMid,
+              color: isActive ? T.ink : "#9a9aab",
               letterSpacing: "-0.1px",
             }}
           >
@@ -6421,7 +6458,7 @@ function IntegrationTab({
         <p
           className="mt-1.5 text-[13px] leading-[20px]"
           style={{
-            color: isActive ? T.inkSoft : T.inkSubtle,
+            color: isActive ? T.inkSoft : "#a8a8b8",
             letterSpacing: "-0.05px",
           }}
         >
